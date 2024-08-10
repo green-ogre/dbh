@@ -818,6 +818,7 @@ dependencies = [
  "fxhash",
  "once_cell",
  "pollster",
+ "rand",
  "wasm-bindgen",
  "winny",
 ]
