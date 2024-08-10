@@ -37,6 +37,7 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&mut self, app: &mut App) {
         app.insert_resource(PressedState::default())
+            .egui_component::<Dash>()
             // .add_systems(
             //     Schedule::PostUpdate,
             //     // level_up_sfx,
@@ -68,6 +69,9 @@ impl From<DirectionalVelocity> for Vec3f {
     }
 }
 
+#[derive(Component, Debug, Default, Clone, Copy)]
+pub struct LastKnownVelocity(pub Vec3f);
+
 #[derive(Component, Debug)]
 pub struct PlayerExp(pub u32);
 
@@ -80,6 +84,27 @@ impl PlayerLevel {
     }
 }
 
+#[derive(AsEgui, Component, Debug)]
+pub struct Dash {
+    strength: f32,
+    duration: f32,
+    remaining: f32,
+    cooldown_duration: f32,
+    cooldown: f32,
+}
+
+impl Default for Dash {
+    fn default() -> Self {
+        Self {
+            strength: 20.0,
+            duration: 0.1,
+            remaining: 0.0,
+            cooldown_duration: 0.5,
+            cooldown: 0.0,
+        }
+    }
+}
+
 #[derive(Bundle)]
 pub struct PlayerBundle {
     transform: Transform,
@@ -89,6 +114,8 @@ pub struct PlayerBundle {
     directional_velocity: DirectionalVelocity,
     health: Health,
     sprite: SpriteBundle,
+    last_known_vel: LastKnownVelocity,
+    dash: Dash,
 }
 
 impl PlayerBundle {
@@ -100,15 +127,13 @@ impl PlayerBundle {
                 translation: position,
             },
             velocity: Default::default(),
+            last_known_vel: Default::default(),
             // collider: Collider::Rect(RectCollider {
             //     tl: Vec3f::new(0., 0., 0.),
             //     size: Vec3f::new(20., 25., 0.),
             // }),
             directional_velocity: DirectionalVelocity::default(),
-            collider: Collider::Circle(CircleCollider {
-                position: Vec3f::new(0., 0., 0.),
-                radius: 25.,
-            }),
+            collider: PlayerBundle::collider(),
             player: Player,
             health: Health::new(100., 0.),
             sprite: SpriteBundle {
@@ -119,7 +144,15 @@ impl PlayerBundle {
                 material: Material2d::default(),
                 handle: server.load("res/player.png"),
             },
+            dash: Dash::default(),
         }
+    }
+
+    fn collider() -> Collider {
+        Collider::Circle(CircleCollider {
+            position: Vec3f::new(0., 0., 0.),
+            radius: 25.,
+        })
     }
 }
 
@@ -217,28 +250,53 @@ impl PlayerBundle {
 const PLAYER_SPEED: f32 = 10.0;
 
 pub fn update_player(
-    mut q: Query<(Mut<Velocity>, Mut<DirectionalVelocity>), With<Player>>,
+    mut commands: Commands,
+    mut q: Query<
+        (
+            Entity,
+            Mut<Velocity>,
+            Mut<DirectionalVelocity>,
+            Mut<LastKnownVelocity>,
+            Mut<Dash>,
+        ),
+        With<Player>,
+    >,
     state: Res<PressedState>,
+    delta: Res<DeltaTime>,
     // collision: EventReader<PlayerCollideEvent>,
     // mut level_writer: EventWriter<LevelUpEvent>,
 ) {
-    let Some((Velocity(velocity), dir_vel)) = q.iter_mut().next() else {
+    let Some((player, Velocity(velocity), dir_vel, last_known_vel, dash)) = q.iter_mut().next()
+    else {
         return;
     };
 
-    let speed = 0.25f32;
+    if dash.remaining > 0.0 {
+        *velocity = last_known_vel.0.normalize() * dash.strength;
+        dash.remaining -= delta.delta;
 
-    dir_vel.up = state.up.then_some(speed).unwrap_or_default();
-    dir_vel.down = state.down.then_some(speed).unwrap_or_default();
-    dir_vel.left = state.left.then_some(speed).unwrap_or_default();
-    dir_vel.right = state.right.then_some(speed).unwrap_or_default();
+        // finished dash
+        if dash.remaining <= 0.0 {
+            commands.get_entity(player).insert(PlayerBundle::collider());
+        }
+    } else {
+        let speed = 0.25f32;
 
-    let mut norm: Vec3f = (*dir_vel).into();
+        dir_vel.up = state.up.then_some(speed).unwrap_or_default();
+        dir_vel.down = state.down.then_some(speed).unwrap_or_default();
+        dir_vel.left = state.left.then_some(speed).unwrap_or_default();
+        dir_vel.right = state.right.then_some(speed).unwrap_or_default();
 
-    if !norm.is_zero() {
-        norm = norm.normalize() * PLAYER_SPEED;
+        let mut norm: Vec3f = (*dir_vel).into();
+
+        if !norm.is_zero() {
+            norm = norm.normalize() * PLAYER_SPEED;
+            *last_known_vel = LastKnownVelocity(norm);
+        }
+        *velocity = norm;
     }
-    *velocity = norm;
+
+    dash.cooldown = (dash.cooldown - delta.delta).clamp(0.0, 100.0);
 
     // while exp.0 >= level.level_up_exp() {
     //     exp.0 -= level.level_up_exp();
@@ -251,10 +309,14 @@ pub fn update_player(
     // }
 }
 
-pub fn update_keystate(input: EventReader<KeyInput>, mut state: ResMut<PressedState>) {
+pub fn update_keystate(
+    mut commands: Commands,
+    input: EventReader<KeyInput>,
+    mut state: ResMut<PressedState>,
+    mut player: Query<(Entity, Mut<Dash>), With<Player>>,
+) {
     for event in input.peak_read() {
         let ks = matches!(event.state, KeyState::Pressed);
-        // info!("Key: {:?}", event);
 
         match event.code {
             KeyCode::W => state.up = ks,
@@ -262,6 +324,25 @@ pub fn update_keystate(input: EventReader<KeyInput>, mut state: ResMut<PressedSt
             KeyCode::A => state.left = ks,
             KeyCode::D => state.right = ks,
             _ => {}
+        }
+
+        if matches!(
+            event,
+            KeyInput {
+                code: KeyCode::Space,
+                state: KeyState::Pressed,
+                ..
+            }
+        ) {
+            let Ok((player, dash)) = player.get_single_mut() else {
+                return;
+            };
+
+            if dash.cooldown <= 0.0 {
+                dash.remaining = dash.duration;
+                dash.cooldown = dash.cooldown_duration;
+                commands.get_entity(player).remove::<Collider>();
+            }
         }
     }
 }

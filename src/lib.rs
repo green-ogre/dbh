@@ -1,4 +1,7 @@
+use audio::SoundPlugin;
+use bullet::{spawner::WeaponPlugin, FireSkullBundle};
 use camera::CameraPlugin;
+use collision::CollisionPlugin;
 use player::{PlayerBundle, PlayerPlugin};
 use winny::{
     asset::server::AssetServer,
@@ -7,6 +10,8 @@ use winny::{
     prelude::*,
 };
 
+pub mod audio;
+pub mod bullet;
 pub mod camera;
 pub mod collision;
 pub mod loader;
@@ -34,8 +39,11 @@ pub fn run() {
             },
             TomlPlugin,
             WatcherPlugin,
+            CollisionPlugin,
             PlayerPlugin,
+            WeaponPlugin,
             CameraPlugin,
+            SoundPlugin,
         ))
         .add_systems(Schedule::StartUp, startup)
         .add_systems(Schedule::PostUpdate, apply_velocity)
@@ -66,17 +74,17 @@ fn startup(mut commands: Commands, server: Res<AssetServer>) {
 
     commands.spawn(Camera2dBundle::default());
 
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                scale: Vec2f::new(0.1, 0.1),
-                ..Default::default()
-            },
-            material: Material2d::default(),
-            handle: server.load("res/player.png"),
-        },
-        Transform::default(),
-    ));
+    // commands.spawn((
+    //     SpriteBundle {
+    //         sprite: Sprite {
+    //             scale: Vec2f::new(0.1, 0.1),
+    //             ..Default::default()
+    //         },
+    //         material: Material2d::default(),
+    //         handle: server.load("res/player.png"),
+    //     },
+    //     Transform::default(),
+    // ));
 
     // commands.spawn((
     //     ParticleBundle {
@@ -95,4 +103,11 @@ fn startup(mut commands: Commands, server: Res<AssetServer>) {
     // ));
 
     commands.spawn(PlayerBundle::new(Vec3f::zero(), &server));
+
+    commands.spawn((FireSkullBundle::new_spawner(), Transform::default()));
+    // commands.spawn(FireSkullBundle::new(
+    //     &server,
+    //     Transform::default(),
+    //     Velocity(Vec3f::new(1.0, 0.0, 0.0)),
+    // ));
 }
