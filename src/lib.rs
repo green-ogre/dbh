@@ -1,3 +1,5 @@
+use camera::CameraPlugin;
+use player::{PlayerBundle, PlayerPlugin};
 use winny::{
     asset::server::AssetServer,
     gfx::camera::Camera2dBundle,
@@ -5,8 +7,15 @@ use winny::{
     prelude::*,
 };
 
+pub mod camera;
+pub mod collision;
+pub mod loader;
+pub mod player;
+pub mod types;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
+
+pub use types::*;
 
 pub fn run() {
     App::default()
@@ -25,9 +34,18 @@ pub fn run() {
             },
             TomlPlugin,
             WatcherPlugin,
+            PlayerPlugin,
+            CameraPlugin,
         ))
         .add_systems(Schedule::StartUp, startup)
+        .add_systems(Schedule::PostUpdate, apply_velocity)
         .run();
+}
+
+pub fn apply_velocity(mut q: Query<(Mut<Transform>, Velocity)>) {
+    for (transform, vel) in q.iter_mut() {
+        transform.translation += vel.0;
+    }
 }
 
 fn startup(mut commands: Commands, server: Res<AssetServer>) {
@@ -49,18 +67,32 @@ fn startup(mut commands: Commands, server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
 
     commands.spawn((
-        ParticleBundle {
-            emitter: ParticleEmitter {
-                acceleration: Vec3f::new(0., -100., 0.),
-                width: 400.,
-                height: 400.,
-                particle_scale: Vec2f::new(0.2, 0.2),
+        SpriteBundle {
+            sprite: Sprite {
+                scale: Vec2f::new(0.1, 0.1),
                 ..Default::default()
             },
             material: Material2d::default(),
-            handle: server.load("winny/res/cube.png"),
+            handle: server.load("res/player.png"),
         },
         Transform::default(),
-        server.load::<Toml, _>("res/emitter.toml"),
     ));
+
+    // commands.spawn((
+    //     ParticleBundle {
+    //         emitter: ParticleEmitter {
+    //             acceleration: Vec3f::new(0., -100., 0.),
+    //             width: 400.,
+    //             height: 400.,
+    //             particle_scale: Vec2f::new(0.2, 0.2),
+    //             ..Default::default()
+    //         },
+    //         material: Material2d::default(),
+    //         handle: server.load("winny/res/cube.png"),
+    //     },
+    //     Transform::default(),
+    //     server.load::<Toml, _>("res/emitter.toml"),
+    // ));
+
+    commands.spawn(PlayerBundle::new(Vec3f::zero(), &server));
 }
