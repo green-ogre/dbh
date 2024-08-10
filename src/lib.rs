@@ -44,6 +44,7 @@ pub fn run() {
             WeaponPlugin,
             CameraPlugin,
             SoundPlugin,
+            ChildrenPlugin,
         ))
         .add_systems(Schedule::StartUp, startup)
         .add_systems(Schedule::PostUpdate, apply_velocity)

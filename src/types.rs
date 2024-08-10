@@ -54,29 +54,73 @@ impl Health {
     }
 }
 
+pub struct ChildrenPlugin;
+
+impl Plugin for ChildrenPlugin {
+    fn build(&mut self, app: &mut App) {
+        app.add_systems(Schedule::Update, (move_children, manage_children))
+            .add_systems(Schedule::PostUpdate, manage_parents);
+    }
+}
+
+/// Describes a parent-child relationship.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Component)]
+pub struct Children(pub Vec<Entity>);
+
 /// Describes a parent-child relationship.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Component)]
-pub struct ChildOf(pub Entity);
+pub struct Parent(pub Entity);
 
-pub fn move_children(
-    parents: Query<Transform, Without<ChildOf>>,
-    mut children: Query<(ChildOf, Mut<Transform>)>,
+/// Add a parent-child relationship between the parent entity and the child entity.
+pub fn push_child(
+    parent: Entity,
+    child: Entity,
+    commands: &mut Commands,
+    parents: &mut Query<Option<Mut<Children>>>,
 ) {
-    for (ChildOf(entity), transform) in children.iter_mut() {
+    match parents.get_mut(parent) {
+        Some(Some(children)) => {
+            children.0.push(child);
+        }
+        Some(None) => {
+            commands.get_entity(parent).insert(Children(vec![child]));
+        }
+        None => {}
+    }
+}
+
+fn move_children(
+    parents: Query<Transform, With<Children>>,
+    mut children: Query<(Parent, Mut<Transform>)>,
+) {
+    for (Parent(entity), transform) in children.iter_mut() {
         if let Some(parent) = parents.get(*entity) {
             *transform = *parent;
         }
     }
 }
 
-pub fn cull_children(
-    parents: Query<Entity>,
-    mut children: Query<(Entity, Mut<ChildOf>)>,
+fn manage_children(
+    parents: Query<Entity, With<Children>>,
+    mut children: Query<(Entity, Mut<Parent>)>,
     mut commands: Commands,
 ) {
-    for (child, ChildOf(parent)) in children.iter_mut() {
+    for (child, Parent(parent)) in children.iter_mut() {
         if parents.get(*parent).is_none() {
             commands.get_entity(child).despawn();
+        }
+    }
+}
+
+pub fn manage_parents(
+    mut parents: Query<(Entity, Mut<Children>)>,
+    children: Query<Entity, With<Parent>>,
+    mut commands: Commands,
+) {
+    for (parent, c) in parents.iter_mut() {
+        c.0.retain(|e| children.get(*e).is_some());
+        if c.0.is_empty() {
+            commands.get_entity(parent).remove::<Children>();
         }
     }
 }
