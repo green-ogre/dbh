@@ -1200,6 +1200,7 @@ dependencies = [
  "app",
  "asset",
  "bytemuck",
+ "cereal",
  "cgmath",
  "console_error_panic_hook",
  "ecs",

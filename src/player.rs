@@ -22,7 +22,10 @@
 
 use winny::{
     asset::server::AssetServer,
-    gfx::cgmath::{Quaternion, Zero},
+    gfx::{
+        cgmath::{Quaternion, Zero},
+        mesh2d::Mesh2d,
+    },
     math::vector::{Vec2f, Vec3f},
     prelude::*,
 };
@@ -113,7 +116,8 @@ pub struct PlayerBundle {
     player: Player,
     directional_velocity: DirectionalVelocity,
     health: Health,
-    sprite: SpriteBundle,
+    // sprite: SpriteBundle,
+    mesh: Handle<Mesh2d>,
     last_known_vel: LastKnownVelocity,
     dash: Dash,
 }
@@ -123,7 +127,7 @@ impl PlayerBundle {
         Self {
             transform: Transform {
                 rotation: Quaternion::zero(),
-                scale: Vec2f::one(),
+                scale: Vec2f::new(0.4, -0.4),
                 translation: position,
             },
             velocity: Default::default(),
@@ -136,15 +140,16 @@ impl PlayerBundle {
             collider: PlayerBundle::collider(),
             player: Player,
             health: Health::new(100., 0.),
-            sprite: SpriteBundle {
-                sprite: Sprite {
-                    scale: Vec2f::new(0.1, 0.1),
-                    ..Default::default()
-                },
-                material: Material2d::default(),
-                handle: server.load("res/player.png"),
-            },
+            // sprite: SpriteBundle {
+            //     sprite: Sprite {
+            //         scale: Vec2f::new(0.1, 0.1),
+            //         ..Default::default()
+            //     },
+            //     material: Material2d::default(),
+            //     handle: server.load("res/player.png"),
+            // },
             dash: Dash::default(),
+            mesh: server.load("res/saved/player_mesh.msh"),
         }
     }
 
@@ -247,7 +252,7 @@ impl PlayerBundle {
 // #[derive(Debug, Event)]
 // pub struct LevelUpEvent(pub PlayerLevel);
 
-const PLAYER_SPEED: f32 = 10.0;
+const PLAYER_SPEED: f32 = 5.0;
 
 pub fn update_player(
     mut commands: Commands,

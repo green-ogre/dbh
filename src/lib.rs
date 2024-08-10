@@ -5,7 +5,7 @@ use collision::CollisionPlugin;
 use player::{PlayerBundle, PlayerPlugin};
 use winny::{
     asset::server::AssetServer,
-    gfx::camera::Camera2dBundle,
+    gfx::{camera::Camera2dBundle, mesh2d::Mesh2d},
     math::vector::{Vec2f, Vec3f},
     prelude::*,
 };

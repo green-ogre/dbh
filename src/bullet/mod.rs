@@ -8,6 +8,7 @@ use crate::{
 };
 use winny::{
     asset::server::AssetServer,
+    gfx::mesh2d::Mesh2d,
     math::vector::{Vec2f, Vec3f},
     prelude::*,
 };
@@ -160,11 +161,12 @@ pub struct FireSkullBundle {
     damage: CollisionDamage,
     lifespan: Lifespan,
     uptime: Uptime,
-    sprite: SpriteBundle,
+    mesh: Handle<Mesh2d>,
 }
 
 impl FireSkullBundle {
-    pub fn new(server: &AssetServer, transform: Transform, velocity: Velocity) -> Self {
+    pub fn new(server: &AssetServer, mut transform: Transform, velocity: Velocity) -> Self {
+        transform.scale = Vec2f::new(0.1, 0.1);
         Self {
             transform,
             velocity,
@@ -176,14 +178,7 @@ impl FireSkullBundle {
             damage: CollisionDamage(2f32),
             lifespan: Lifespan(6f32),
             uptime: Uptime(2f32),
-            sprite: SpriteBundle {
-                sprite: Sprite {
-                    scale: Vec2f::new(0.1, 0.1),
-                    ..Default::default()
-                },
-                material: Material2d::default(),
-                handle: server.load("res/player.png"),
-            },
+            mesh: server.load("res/saved/bullet_1_mesh.msh"),
         }
     }
 

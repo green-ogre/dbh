@@ -73,6 +73,7 @@ fn update_camera(
 /// Handles main camera logic.
 #[derive(Resource, AsEgui, Serialize, Deserialize)]
 pub struct PlayerCamera {
+    #[skip]
     screen_shake: Vec<ScreenShake>,
     max_smooth_factor: f32,
     min_smooth_factor: f32,
