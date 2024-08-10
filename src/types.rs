@@ -6,6 +6,10 @@ pub struct Velocity(pub Vec3f);
 #[derive(Debug, Default, Component, Clone, Copy, PartialEq)]
 pub struct CollisionDamage(pub f32);
 
+/// We'll consider this to be anything other than the player that should be collided with.
+#[derive(Debug, Component)]
+pub struct Enemy;
+
 /// Represents health.
 ///
 /// The members are private to preserve their invariants.
@@ -58,8 +62,8 @@ pub struct ChildrenPlugin;
 
 impl Plugin for ChildrenPlugin {
     fn build(&mut self, app: &mut App) {
-        app.add_systems(Schedule::Update, (move_children, manage_children))
-            .add_systems(Schedule::PostUpdate, manage_parents);
+        app.add_systems(Schedule::Update, (manage_children,))
+            .add_systems(Schedule::PostUpdate, (manage_parents, move_children));
     }
 }
 

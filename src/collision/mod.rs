@@ -1,4 +1,3 @@
-use self::systems::update_player_collision;
 use fxhash::{FxHashMap, FxHashSet};
 use winny::{
     gfx::cgmath::{Matrix4, Quaternion, Zero},
@@ -9,7 +8,7 @@ use winny::{
     prelude::*,
 };
 
-// pub mod indicators;
+pub mod indicators;
 mod systems;
 
 pub struct CollisionPlugin;
@@ -18,12 +17,16 @@ impl Plugin for CollisionPlugin {
     fn build(&mut self, app: &mut App) {
         app.insert_resource(PlayerCollisionMap::default())
             .insert_resource(EnemyCollisionMap::default())
-            // .insert_resource(indicators::ShowIndicators(false))
+            .insert_resource(indicators::ShowIndicators(false))
             .register_event::<EnemyCollideEvent>()
             .register_event::<PlayerCollideEvent>()
             .add_systems(
                 Schedule::Update,
-                (update_player_collision,), //update_enemy_collision), // indicators::manage_indicators,
+                (
+                    systems::update_player_collision,
+                    systems::update_enemy_collision,
+                    indicators::manage_indicators,
+                ),
             );
     }
 }
