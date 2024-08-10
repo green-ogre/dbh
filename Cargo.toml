@@ -1,0 +1,26 @@
+[package]
+name = "dbh"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+winny = { path = "winny", features = ["editor"] }
+
+[profile.dev.package.'*']
+opt-level = 3
+codegen-units = 1
+
+[profile.dev]
+opt-level = 0
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+once_cell = "1.19.0"
+wasm-bindgen = "0.2.92"
+winny = { path = "winny" }
+
+# Turn ON when generating release wasm
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
