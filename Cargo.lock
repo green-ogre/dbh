@@ -223,6 +223,7 @@ name = "asset"
 version = "0.1.0"
 dependencies = [
  "app",
+ "cereal",
  "crossbeam-channel",
  "ecs",
  "parking_lot",

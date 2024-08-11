@@ -74,8 +74,10 @@ impl IndicatorBundle {
                 indicator: Indicator,
             },
             SpriteBundle {
-                material: Material2d::default(),
-                handle: server.load(sprite_source),
+                material: Material2d {
+                    texture: server.load(sprite_source),
+                    ..Default::default()
+                },
                 sprite: Sprite {
                     position: sprite_position,
                     scale: sprite_scale,

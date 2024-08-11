@@ -60,6 +60,7 @@ impl Health {
     }
 }
 
+#[derive(Debug)]
 pub struct ChildrenPlugin;
 
 impl Plugin for ChildrenPlugin {

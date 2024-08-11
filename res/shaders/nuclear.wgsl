@@ -5,14 +5,18 @@ struct VertexOutput {
 
 struct MaterialUniform {
   modulation: vec4<f32>,
-  opacity: f32,
-  saturation: f32,
 }
 
 @group(1) @binding(0)
+var texture: texture_2d<f32>;
+
+@group(1) @binding(1)
+var texture_sampler: sampler;
+
+@group(1) @binding(2)
 var<uniform> mat: MaterialUniform;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+    return mat.modulation;
 }

@@ -1,10 +1,10 @@
+use self::spawner::{BulletSpawner, Lifespan, Uptime};
 use std::f32::consts::PI;
 
-use self::spawner::{BulletSpawner, Lifespan, Uptime};
 use crate::{
     audio::AudioMaster,
     collision::{CircleCollider, CollideWithEnemy, Collider},
-    shaders::Nuclear,
+    shaders::{neutrons::NuclearNeutron, player::Nuclear, ColorPalette, Paper8, SpaceHaze},
     CollisionDamage, Velocity,
 };
 use spawner::RemoveOnCollision;
@@ -174,7 +174,7 @@ pub struct NeutronBundle {
     lifespan: Lifespan,
     uptime: Uptime,
     mesh: Handle<Mesh2d>,
-    material: Nuclear,
+    material: NuclearNeutron,
     radial_velocity: RadialVelocity,
     progenitor: Progenitor,
 }
@@ -199,7 +199,10 @@ impl NeutronBundle {
             lifespan: Lifespan(6f32),
             uptime: Uptime(2f32),
             mesh: server.load("res/saved/bullet_1_mesh.msh"),
-            material: default_bullet_material(server),
+            material: NuclearNeutron {
+                modulation: Modulation(SpaceHaze::pink()),
+                texture: server.load("res/noise/noise.png"),
+            },
             radial_velocity: RadialVelocity {
                 strength: Radf(1.0),
                 total_rotation: Radf(0.0),
@@ -239,14 +242,5 @@ impl RadialVelocity {
     pub fn update(&mut self, transform: &mut Transform, dt: &DeltaTime) {
         let rotation = Quaternion::from_angle_z(Rad(self.strength.0 * dt.delta));
         transform.rotation = transform.rotation * rotation;
-    }
-}
-
-fn default_bullet_material(server: &AssetServer) -> Nuclear {
-    Nuclear {
-        modulation: Modulation::default(),
-        opacity: Opacity::default(),
-        saturation: Saturation::default(),
-        texture: server.load("res/noise/noise.png"),
     }
 }

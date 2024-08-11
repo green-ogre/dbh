@@ -1,21 +1,19 @@
-use atoms::AtomPlugin;
+use std::io::Read;
+
+use atoms::{AtomBundle, AtomPlugin};
 use audio::SoundPlugin;
-<<<<<<< HEAD
-use bullet::{spawner::WeaponPlugin, FireSkullBundle, RadialVelocity};
-=======
-use bullet::{spawner::WeaponPlugin, NeutronBundle};
->>>>>>> dcab5f8fc61107d2641975d1d2d07a8e55518e50
+use bullet::NeutronBundle;
+use bullet::{spawner::WeaponPlugin, RadialVelocity};
 use camera::CameraPlugin;
 use collision::CollisionPlugin;
 use player::{PlayerBundle, PlayerPlugin};
-use shaders::ShaderArtPlugin;
+use rand::Rng;
+use shaders::{ColorPalette, Paper8};
+use shaders::{ShaderArtPlugin, SpaceHaze};
+use winny::gfx::mesh2d::{Mesh2d, Points};
 use winny::{
     asset::server::AssetServer,
-    gfx::{
-        camera::Camera2dBundle,
-        cgmath::{Quaternion, Rad, Rotation3},
-        mesh2d::Mesh2d,
-    },
+    gfx::camera::Camera2dBundle,
     math::vector::{Vec2f, Vec3f},
     prelude::*,
 };
@@ -56,13 +54,10 @@ pub fn run() {
             WeaponPlugin,
             CameraPlugin,
             SoundPlugin,
-<<<<<<< HEAD
             ShaderArtPlugin,
-=======
             ChildrenPlugin,
-            AtomPlugin,
->>>>>>> dcab5f8fc61107d2641975d1d2d07a8e55518e50
         ))
+        .add_plugins(AtomPlugin)
         .add_systems(Schedule::StartUp, startup)
         .add_systems(
             Schedule::PostUpdate,
@@ -86,7 +81,8 @@ pub fn apply_radial_velocity(
     }
 }
 
-fn startup(mut commands: Commands, server: Res<AssetServer>) {
+fn startup(mut commands: Commands, server: Res<AssetServer>, mut clear_color: ResMut<ClearColor>) {
+    clear_color.0 = Modulation(SpaceHaze::dark_blue());
     #[cfg(target_arch = "wasm32")]
     server.set_prefix(
         wasm::ITCH_PREFIX

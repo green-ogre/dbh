@@ -32,7 +32,7 @@ use winny::{
 
 use crate::{
     collision::{CircleCollider, Collider},
-    shaders::Nuclear,
+    shaders::{player::Nuclear, ColorPalette, Paper8, SpaceHaze},
     Health, Velocity,
 };
 
@@ -154,9 +154,7 @@ impl PlayerBundle {
             dash: Dash::default(),
             mesh: server.load("res/saved/player_mesh.msh"),
             material: Nuclear {
-                modulation: Modulation::default(),
-                opacity: Opacity::default(),
-                saturation: Saturation::default(),
+                modulation: Modulation(SpaceHaze::white()),
                 texture: server.load("res/noise/noise.png"),
             },
         }

@@ -1,6 +1,7 @@
 use crate::{
     bullet::{NeutronBundle, Progenitor},
     collision::{CircleCollider, Collider, EnemyCollideEvent},
+    shaders::{atoms::NuclearAtom, ColorPalette, Paper8, SpaceHaze},
     CollisionDamage, Enemy, GetOrLog, RandomDirectionIterator, Velocity,
 };
 use angle::Radf;
@@ -12,6 +13,7 @@ use std::f32::consts::FRAC_PI_2;
 use vector::{Vec2f, Vec3f};
 use winny::prelude::*;
 
+#[derive(Debug)]
 pub struct AtomPlugin;
 
 impl Plugin for AtomPlugin {
@@ -61,6 +63,7 @@ pub struct AtomBundle {
     // lifespan: Lifespan,
     // uptime: Uptime,
     mesh: Handle<Mesh2d>,
+    material: NuclearAtom,
 }
 
 impl AtomBundle {
@@ -88,6 +91,10 @@ impl AtomBundle {
             progenitor: Progenitor(progenitor),
             damage: CollisionDamage(1.),
             mesh: server.load("res/saved/bullet_1_mesh.msh"),
+            material: NuclearAtom {
+                modulation: Modulation(SpaceHaze::purple()),
+                texture: server.load("res/noise/noise.png"),
+            },
         }
     }
 }
