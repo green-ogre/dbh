@@ -1,4 +1,4 @@
-use std::f32::consts::TAU;
+use std::f32::consts::{FRAC_PI_2, TAU};
 
 use crate::{
     bullet::NeutronBundle,
@@ -295,6 +295,7 @@ pub fn update_player(
     mut q: Query<
         (
             Entity,
+            Mut<Transform>,
             Mut<Velocity>,
             Mut<DirectionalVelocity>,
             Mut<LastKnownVelocity>,
@@ -304,10 +305,12 @@ pub fn update_player(
     >,
     state: Res<PressedState>,
     delta: Res<DeltaTime>,
+    mouse: Res<MousePosition>,
     // collision: EventReader<PlayerCollideEvent>,
     // mut level_writer: EventWriter<LevelUpEvent>,
 ) {
-    let Some((player, Velocity(velocity), dir_vel, last_known_vel, dash)) = q.iter_mut().next()
+    let Some((player, transform, Velocity(velocity), dir_vel, last_known_vel, dash)) =
+        q.iter_mut().next()
     else {
         return;
     };
@@ -338,6 +341,12 @@ pub fn update_player(
     }
 
     dash.cooldown = (dash.cooldown - delta.delta).clamp(0.0, 100.0);
+
+    let direction: Vec3f = mouse.0.into();
+    let direction = direction - transform.translation;
+    let angle = direction.y.atan2(direction.x);
+
+    transform.rotation = Quaternion::from_angle_z(Rad(-angle - FRAC_PI_2));
 
     // while exp.0 >= level.level_up_exp() {
     //     exp.0 -= level.level_up_exp();

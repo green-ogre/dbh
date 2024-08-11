@@ -2,6 +2,7 @@ use std::f32::consts::TAU;
 
 use crate::{
     loader::LoaderApp,
+    mouse::MousePosition,
     player::{DirectionalVelocity, Player},
 };
 use noise::NoiseFn;
@@ -84,6 +85,7 @@ fn update_camera(
     player: Query<(Transform, DirectionalVelocity), With<Player>>,
     mut camera: Query<Mut<Transform>, With<Camera>>,
     delta: Res<DeltaTime>,
+    mouse_position: Res<MousePosition>,
 ) {
     let Ok(camera) = camera.get_single_mut() else {
         return;
@@ -94,7 +96,7 @@ fn update_camera(
     };
 
     player_camera.apply_screen_shake(&delta);
-    player_camera.follow_player(vel, player, camera, &delta);
+    player_camera.follow_player(vel, player, camera, &mouse_position, &delta);
 }
 
 /// Handles main camera logic.
@@ -143,11 +145,17 @@ impl PlayerCamera {
         velocity: &DirectionalVelocity,
         player: &Transform,
         camera: &mut Transform,
+        mouse_position: &MousePosition,
         dt: &DeltaTime,
     ) {
-        let distance_to_target = (player.translation - self.follow_point).magnitude();
+        let direction: Vec3f = mouse_position.0.into();
+        let offset = (direction - player.translation).normalize() * 100.;
 
-        let target: Vec3f = Vec3f::from(*velocity).normalize() + player.translation;
+        let target = player.translation + offset;
+
+        let distance_to_target = (target - self.follow_point).magnitude();
+
+        let target: Vec3f = Vec3f::from(*velocity).normalize() + target;
 
         if distance_to_target < self.delta {
             self.follow_point = target;
