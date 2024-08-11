@@ -24,6 +24,7 @@ impl Plugin for PlayerPlugin {
     fn build(&mut self, app: &mut App) {
         app.insert_resource(PressedState::default())
             .insert_resource(MousePosition::default())
+            .insert_resource(ShootInfo::default())
             .egui_component::<Dash>()
             .add_systems(
                 Schedule::StartUp,
@@ -378,7 +379,7 @@ pub fn update_keystate(
         if matches!(
             event,
             KeyInput {
-                code: KeyCode::Space,
+                code: KeyCode::Shift,
                 state: KeyState::Pressed,
                 ..
             }
@@ -424,20 +425,54 @@ fn show_crosshair(
     }
 }
 
+#[derive(Debug, Default, Resource)]
+struct ShootInfo {
+    active: bool,
+    timer: f32,
+}
+
 fn watch_click(
     q: Query<(Transform, Velocity), With<Player>>,
-    reader: EventReader<MouseInput>,
+    mouse: EventReader<MouseInput>,
+    key: EventReader<KeyInput>,
     position: Res<MousePosition>,
     mut commands: Commands,
+    mut shoot: ResMut<ShootInfo>,
     server: Res<AssetServer>,
+    delta: Res<DeltaTime>,
 ) {
     let Some((transform, velocity)) = q.iter().next() else {
         return;
     };
-    for event in reader.peak_read() {
-        if event.button != MouseButton::Left || event.state == KeyState::Released {
-            continue;
+
+    for event in key.peak_read() {
+        if event.code == KeyCode::Space {
+            if event.state == KeyState::Pressed {
+                shoot.active = true;
+                shoot.timer = 0.;
+            } else {
+                shoot.active = false;
+            }
         }
+    }
+
+    for event in mouse.peak_read() {
+        if event.button == MouseButton::Left {
+            if event.state == KeyState::Pressed {
+                shoot.active = true;
+                shoot.timer = 0.;
+            } else {
+                shoot.active = false;
+            }
+        }
+    }
+
+    if !shoot.active {
+        return;
+    }
+
+    while shoot.timer <= 0. {
+        shoot.timer += 0.25;
 
         let position: Vec3f = position.0.into();
         let direction = position - transform.translation;
@@ -448,11 +483,13 @@ fn watch_click(
                 scale: Vec2f::one(),
                 ..Default::default()
             },
-            Velocity(direction.normalize() * 8. + velocity.0),
+            Velocity(direction.normalize() * 8.),
             None,
         ));
         commands.spawn(PlayerBundle::shoot_audio(&server));
     }
+
+    shoot.timer -= delta.delta;
 }
 
 // pub fn update_player_ui(
