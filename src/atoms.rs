@@ -36,7 +36,6 @@ pub struct AtomBundle {
     atom: Atom,
     enemy: Enemy,
     transform: Transform,
-    velocity: Velocity,
     collider: Collider,
     progenitor: Progenitor,
     events: Events,
@@ -50,28 +49,38 @@ impl AtomBundle {
     pub fn spawn(
         commands: &mut Commands,
         position: Vec3f,
-        velocity: Vec3f,
+        velocity: Option<Vec3f>,
         progenitor: Option<Entity>,
         polygons: &RegularPolygons,
         events: u32,
         server: &AssetServer,
         _audio: &mut AudioMaster,
-    ) {
-        PolygonMaterials::spawn_with_material(
-            commands,
-            Self::new(position, velocity, progenitor, polygons, events),
-            6 - events as usize,
-        );
-
+    ) -> Entity {
         // audio.queue_bundle(AudioBundle {
         //     handle: server.load("res/RPG_Essentials_Free/10_Battle_SFX/77_flesh_02.wav"),
         //     playback_settings: PlaybackSettings::default().with_volume(10.0),
         // });
+        if let Some(vel) = velocity {
+            PolygonMaterials::spawn_with_material(
+                commands,
+                (
+                    Self::new(position, progenitor, polygons, events),
+                    Velocity(vel),
+                ),
+                6 - events as usize,
+            )
+        } else {
+            PolygonMaterials::spawn_with_material(
+                commands,
+                Self::new(position, progenitor, polygons, events),
+                6 - events as usize,
+            )
+        }
     }
 
     fn new(
         position: Vec3f,
-        velocity: Vec3f,
+        // velocity: Vec3f,
         progenitor: Option<Entity>,
         polygons: &RegularPolygons,
         events: u32,
@@ -84,7 +93,7 @@ impl AtomBundle {
                 scale: Vec2f::new(0.5, 0.5),
                 ..Default::default()
             },
-            velocity: Velocity(velocity),
+            // velocity: Velocity(velocity),
             collider: Collider::Circle(CircleCollider {
                 radius: 40.,
                 ..Default::default()
@@ -105,7 +114,7 @@ impl AtomBundle {
 pub struct TotalEvents(pub usize);
 
 fn handle_neutron(
-    q: Query<(Entity, Transform, Velocity, Progenitor, Events), With<Atom>>,
+    q: Query<(Entity, Transform, Option<Velocity>, Progenitor, Events), With<Atom>>,
     bullets: Query<(Entity, Transform, Velocity, Progenitor)>,
     reader: EventReader<EnemyCollideEvent>,
     mut commands: Commands,
@@ -142,7 +151,7 @@ fn handle_neutron(
             continue;
         }
 
-        let direction = bullet_velocity.0 + atom_velocity.0;
+        let direction = bullet_velocity.0 + atom_velocity.map_or(Default::default(), |v| v.0);
         // let direction =
         //     bullet_velocity.0 + (atom_position.translation - bullet_transform.translation) * 0.25;
         let direction = direction.normalize();
@@ -153,7 +162,7 @@ fn handle_neutron(
             AtomBundle::spawn(
                 &mut commands,
                 atom_position.translation,
-                direction,
+                Some(direction),
                 Some(atom),
                 &polygons,
                 events.0 + 1,

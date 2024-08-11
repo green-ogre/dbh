@@ -1,5 +1,5 @@
 use super::Collider;
-use crate::{push_child, Children, Parent};
+use crate::Parent;
 use server::AssetServer;
 use vector::{Vec2f, Vec3f};
 use winny::{
@@ -97,7 +97,6 @@ pub fn manage_indicators(
     input: EventReader<KeyInput>,
     mut server: ResMut<AssetServer>,
     mut show: ResMut<ShowIndicators>,
-    mut parents: Query<Option<Mut<Children>>>,
 ) {
     if input.peak_read().any(|k| {
         matches!(
@@ -123,7 +122,7 @@ pub fn manage_indicators(
                 ))
                 .entity();
             commands.get_entity(entity).insert(Indicated);
-            push_child(entity, child, &mut commands, &mut parents);
+            // push_child(entity, child, &mut commands, &mut parents);
         }
     } else {
         for entity in indicated.iter() {

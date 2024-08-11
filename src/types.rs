@@ -9,7 +9,7 @@ pub struct Velocity(pub Vec3f);
 pub struct CollisionDamage(pub f32);
 
 /// We'll consider this to be anything other than the player that should be collided with.
-#[derive(Debug, Component)]
+#[derive(Debug, Component, AsEgui)]
 pub struct Enemy;
 
 /// Represents health.
@@ -60,55 +60,64 @@ impl Health {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, AsEgui)]
 pub struct ChildrenPlugin;
 
 impl Plugin for ChildrenPlugin {
     fn build(&mut self, app: &mut App) {
-        app.add_systems(Schedule::Update, (manage_children,))
-            .add_systems(Schedule::PostUpdate, (manage_parents, move_children));
+        app.add_systems(Schedule::Update, manage_children)
+            .add_systems(Schedule::PostUpdate, (move_children,));
     }
 }
 
-/// Describes a parent-child relationship.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Component)]
-pub struct Children(pub Vec<Entity>);
+// /// Describes a parent-child relationship.
+// #[derive(Debug, Clone, PartialEq, Eq, Hash, Component, AsEgui)]
+// pub struct Children(pub Vec<Entity>);
 
 /// Describes a parent-child relationship.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Component)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Component, AsEgui)]
 pub struct Parent(pub Entity);
 
-/// Add a parent-child relationship between the parent entity and the child entity.
-pub fn push_child(
-    parent: Entity,
-    child: Entity,
-    commands: &mut Commands,
-    parents: &mut Query<Option<Mut<Children>>>,
-) {
-    match parents.get_mut(parent) {
-        Some(Some(children)) => {
-            children.0.push(child);
-        }
-        Some(None) => {
-            commands.get_entity(parent).insert(Children(vec![child]));
-        }
-        None => {}
-    }
-}
+/// A child translation offset.
+#[derive(Debug, Copy, Clone, PartialEq, Component, AsEgui)]
+pub struct ChildOffset(pub Vec3f);
+
+// /// Add a parent-child relationship between the parent entity and the child entity.
+// pub fn push_child(
+//     parent: Entity,
+//     child: Entity,
+//     commands: &mut Commands,
+//     // parents: &mut Query<Option<Mut<Children>>>,
+// ) {
+//     match parents.get_mut(parent) {
+//         Some(Some(children)) => {
+//             children.0.push(child);
+//         }
+//         Some(None) => {
+//             commands.get_entity(parent).insert(Children(vec![child]));
+//         }
+//         None => {}
+//     }
+// }
 
 fn move_children(
-    parents: Query<Transform, With<Children>>,
-    mut children: Query<(Parent, Mut<Transform>)>,
+    parents: Query<Transform>,
+    mut children: Query<(Parent, Mut<Transform>, Option<ChildOffset>)>,
 ) {
-    for (Parent(entity), transform) in children.iter_mut() {
+    for (Parent(entity), transform, offset) in children.iter_mut() {
+        warn!("child!");
         if let Some(parent) = parents.get(*entity) {
             *transform = *parent;
+
+            warn!("offset: {:#?}", offset);
+
+            transform.translation += offset.map_or(Default::default(), |o| o.0);
         }
     }
 }
 
 fn manage_children(
-    parents: Query<Entity, With<Children>>,
+    parents: Query<Entity>,
     mut children: Query<(Entity, Mut<Parent>)>,
     mut commands: Commands,
 ) {
@@ -119,18 +128,18 @@ fn manage_children(
     }
 }
 
-pub fn manage_parents(
-    mut parents: Query<(Entity, Mut<Children>)>,
-    children: Query<Entity, With<Parent>>,
-    mut commands: Commands,
-) {
-    for (parent, c) in parents.iter_mut() {
-        c.0.retain(|e| children.get(*e).is_some());
-        if c.0.is_empty() {
-            commands.get_entity(parent).remove::<Children>();
-        }
-    }
-}
+// pub fn manage_parents(
+//     mut parents: Query<Entity>,
+//     children: Query<Entity, With<Parent>>,
+//     mut commands: Commands,
+// ) {
+//     for parent in parents.iter_mut() {
+//         c.0.retain(|e| children.get(*e).is_some());
+//         if c.0.is_empty() {
+//             commands.get_entity(parent).remove::<Children>();
+//         }
+//     }
+// }
 
 pub trait GetOrLog {
     type Output<'a>

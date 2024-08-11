@@ -4,6 +4,7 @@ use bullet::NeutronBundle;
 use bullet::{spawner::WeaponPlugin, RadialVelocity};
 use camera::CameraPlugin;
 use collision::CollisionPlugin;
+use enemy::spawn_regular;
 use player::{Crosshair, CrosshairOffset, PlayerBundle, PlayerPlugin};
 use rand::Rng;
 use regular::{RegularPolygons, RegularPolygonsPlugin};
@@ -65,6 +66,8 @@ pub fn run() {
             SoundPlugin,
         ))
         .egui_resource::<ThreatLevel>()
+        .egui_component::<Parent>()
+        .egui_component::<ChildOffset>()
         .insert_resource(ThreatLevel(1))
         .insert_resource(GameState::Menu)
         .add_plugins((
@@ -317,22 +320,31 @@ fn startup(
 
     let polygons = RegularPolygons::new(40., &mut assets);
     let mut rng = rand::thread_rng();
-    for _ in 0..10 {
-        let x = rng.gen_range(-500f32..500f32);
-        let y = rng.gen_range(-500f32..500f32);
+    // for _ in 0..10 {
+    //     let x = rng.gen_range(-500f32..500f32);
+    //     let y = rng.gen_range(-500f32..500f32);
 
-        let velocity = Vec3f::new(rng.gen_range(-0.5..0.5), rng.gen_range(-0.5..0.5), 0.);
+    //     let velocity = Vec3f::new(rng.gen_range(-0.5..0.5), rng.gen_range(-0.5..0.5), 0.);
 
-        AtomBundle::spawn(
-            &mut commands,
-            Vec3f::new(x, y, 0.),
-            velocity,
-            None,
-            &polygons,
-            0,
-            &server,
-            &mut audio,
-        );
-    }
+    //     AtomBundle::spawn(
+    //         &mut commands,
+    //         Vec3f::new(x, y, 0.),
+    //         Some(velocity),
+    //         None,
+    //         &polygons,
+    //         0,
+    //         &server,
+    //         &mut audio,
+    //     );
+    // }
+    spawn_regular(
+        Default::default(),
+        &polygons,
+        &mut commands,
+        &server,
+        &mut audio,
+        4,
+    );
+
     commands.insert_resource(polygons);
 }

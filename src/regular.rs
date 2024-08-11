@@ -44,64 +44,68 @@ impl RegularPolygons {
 pub struct PolygonMaterials;
 
 impl PolygonMaterials {
-    pub fn spawn_with_material(commands: &mut Commands, bundle: impl Bundle, index: usize) {
+    pub fn spawn_with_material(
+        commands: &mut Commands,
+        bundle: impl Bundle,
+        index: usize,
+    ) -> Entity {
         match index {
-            6 => {
-                commands.spawn((
+            6 => commands
+                .spawn((
                     bundle,
                     NonagonMaterial {
                         modulation: Modulation(Crimson::color(0)),
                     },
-                ));
-            }
-            5 => {
-                commands.spawn((
+                ))
+                .entity(),
+            5 => commands
+                .spawn((
                     bundle,
                     OctagonMaterial {
                         modulation: Modulation(Crimson::color(1)),
                     },
-                ));
-            }
-            4 => {
-                commands.spawn((
+                ))
+                .entity(),
+            4 => commands
+                .spawn((
                     bundle,
                     HeptaMaterial {
                         modulation: Modulation(Crimson::color(2)),
                     },
-                ));
-            }
-            3 => {
-                commands.spawn((
+                ))
+                .entity(),
+            3 => commands
+                .spawn((
                     bundle,
                     HexaMaterial {
                         modulation: Modulation(Crimson::color(3)),
                     },
-                ));
-            }
-            2 => {
-                commands.spawn((
+                ))
+                .entity(),
+            2 => commands
+                .spawn((
                     bundle,
                     PentagonMaterial {
                         modulation: Modulation(Crimson::color(9)),
                     },
-                ));
-            }
-            1 => {
-                commands.spawn((
+                ))
+                .entity(),
+            1 => commands
+                .spawn((
                     bundle,
                     QuadrilateralMaterial {
                         modulation: Modulation(Crimson::color(8)),
                     },
-                ));
-            }
-            0 => {
-                commands.spawn((
+                ))
+                .entity(),
+            0 => commands
+                .spawn((
                     bundle,
                     TriangleMaterial {
                         modulation: Modulation(Crimson::color(7)),
                     },
-                ));
-            }
+                ))
+                .entity(),
             _ => {
                 unreachable!()
             }
