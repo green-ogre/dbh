@@ -1,4 +1,4 @@
-use atoms::{AtomBundle, AtomPlugin};
+use atoms::{Atom, AtomBundle, AtomPlugin};
 use audio::SoundPlugin;
 use bullet::NeutronBundle;
 use bullet::{spawner::WeaponPlugin, RadialVelocity};
@@ -6,10 +6,13 @@ use camera::CameraPlugin;
 use collision::CollisionPlugin;
 use player::{PlayerBundle, PlayerPlugin};
 use rand::Rng;
+use regular::RegularPolygonsPlugin;
 use shaders::{ColorPalette, Paper8};
 use shaders::{ShaderArtPlugin, SpaceHaze};
 use std::io::Read;
+use text::{TextPlugin, TypeWriter};
 use winny::gfx::mesh2d::{Mesh2d, Points};
+use winny::math::vector::Vec4f;
 use winny::{
     asset::server::AssetServer,
     gfx::camera::Camera2dBundle,
@@ -28,6 +31,7 @@ pub mod mouse;
 pub mod player;
 pub mod regular;
 pub mod shaders;
+pub mod text;
 pub mod types;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
@@ -41,15 +45,13 @@ pub fn run() {
                 window: WindowPlugin {
                     title: "dbh",
                     close_on_escape: true,
-                    #[cfg(target_arch = "wasm32")]
-                    window_size: Vec2f::new(1280., 720.),
-                    #[cfg(not(target_arch = "wasm32"))]
-                    window_size: Vec2f::new(1920., 1080.),
+                    window_size: Vec2f::new(512.0 * 2.0, 512.0 * 2.0),
+                    viewport_size: Vec2f::new(512.0 * 2.0, 512.0 * 2.0),
                     ..Default::default()
                 },
                 ..Default::default()
             },
-            regular::RegularPolygonsPlugin,
+            RegularPolygonsPlugin,
             TomlPlugin,
             WatcherPlugin,
             CollisionPlugin,
@@ -61,14 +63,22 @@ pub fn run() {
         ))
         .egui_resource::<ThreatLevel>()
         .insert_resource(ThreatLevel(1))
-        .add_plugins((AtomPlugin, mouse::MousePlugin))
         .add_plugins((
             AtomPlugin,
             mouse::MousePlugin,
             ChildrenPlugin,
             enemy::EnemyPlugin,
+            TextPlugin,
+        ))
+        .insert_resource(TypeWriter::new(
+            "Meltdown ...".into(),
+            0.1,
+            Vec2f::new(500., 500.),
+            40.0,
+            Modulation(Vec4f::new(1.0, 1.0, 1.0, 1.0)),
         ))
         .add_systems(Schedule::StartUp, startup)
+        .add_systems(Schedule::PreUpdate, update_threat_level)
         .add_systems(
             Schedule::PostUpdate,
             (apply_velocity, apply_radial_velocity),
@@ -100,7 +110,22 @@ impl Default for ThreatLevel {
     }
 }
 
-fn startup(mut commands: Commands, server: Res<AssetServer>, mut clear_color: ResMut<ClearColor>) {
+fn update_threat_level(atoms: Query<Atom>, mut threat: ResMut<ThreatLevel>) {
+    const ENEMEIES_PER_THREAT_LEVEL: u32 = 20;
+
+    let count = atoms.iter().count();
+    threat.0 = count as u32 / ENEMEIES_PER_THREAT_LEVEL;
+}
+
+fn startup(
+    mut commands: Commands,
+    server: Res<AssetServer>,
+    mut clear_color: ResMut<ClearColor>,
+    mut audio: ResMut<GlobalAudio>,
+    type_writer: Res<TypeWriter>,
+) {
+    type_writer.start(&mut commands);
+    audio.volume = 0.0;
     clear_color.0 = Modulation(SpaceHaze::dark_blue());
     #[cfg(target_arch = "wasm32")]
     server.set_prefix(

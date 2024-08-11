@@ -1,4 +1,6 @@
-use crate::shaders::post_processing::build_post_processing_pipeline;
+use std::io::{BufReader, Cursor};
+
+use crate::shaders::post_processing::{background_binding, build_post_processing_pipeline};
 
 use self::{
     atoms::NuclearAtom,
@@ -31,11 +33,18 @@ impl Plugin for ShaderArtPlugin {
             .register_resource::<PostProcessingPipeline<GaussianBlurH>>()
             .register_resource::<PostProcessingPipeline<GaussianBlurV>>()
             .register_resource::<PostProcessingPipeline<Bloom>>()
+            .register_resource::<PostProcessingPipeline<Background>>()
+            .register_resource::<BackgroundBuffer>()
             .register_resource::<BloomTexture>()
             .add_systems(Schedule::StartUp, startup)
             .add_systems(
                 AppSchedule::PreRender,
-                (downscale::set_frame_buf, post_processing::clear_frame_buf),
+                (
+                    downscale::set_frame_buf,
+                    post_processing::clear_frame_buf,
+                    update_background_uniform,
+                    post_processing::render_pass::<Background>,
+                ),
             )
             .add_systems(
                 AppSchedule::PostRender,
@@ -55,6 +64,35 @@ impl Plugin for ShaderArtPlugin {
     }
 }
 
+struct Background;
+#[derive(Resource)]
+pub struct BackgroundTexture(Texture);
+#[derive(Resource)]
+pub struct BackgroundBuffer(wgpu::Buffer);
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+struct BackGroundUniform {
+    time: f32,
+    scroll_speed: f32,
+}
+const BACKGROUND_SCROLL_SPEED: f32 = 0.2;
+
+fn update_background_uniform(
+    pipeline: ResMut<PostProcessingPipeline<Background>>,
+    context: Res<RenderContext>,
+    buffer: Res<BackgroundBuffer>,
+    dt: Res<DeltaTime>,
+) {
+    context.queue.write_buffer(
+        &buffer.0,
+        0,
+        bytemuck::cast_slice(&[BackGroundUniform {
+            time: dt.wrapping_elapsed_as_seconds(),
+            scroll_speed: BACKGROUND_SCROLL_SPEED,
+        }]),
+    );
+}
+
 struct BrightnessThreshold;
 struct GaussianBlurH;
 struct GaussianBlurV;
@@ -64,7 +102,39 @@ pub struct BloomTexture(Texture);
 
 fn startup(mut commands: Commands, context: Res<RenderContext>) {
     let pixler = Pixler::new(&context);
-    let texture = Texture::empty(
+
+    let bytes = std::fs::read("res/textures/nuclear_background.png").unwrap();
+    let reader = ByteReader::new(BufReader::new(Cursor::new(bytes)));
+    let img = Image::new(reader, ImageSettings::default()).unwrap();
+    let background_texture = Texture::from_image(&context.device, &context.queue, &img);
+
+    use wgpu::util::DeviceExt;
+    let buffer = context
+        .device
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: None,
+            contents: bytemuck::cast_slice(&[BackGroundUniform {
+                time: 0.0,
+                scroll_speed: BACKGROUND_SCROLL_SPEED,
+            }]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+    let (layout, binding) = background_binding(
+        &context,
+        &background_texture.create_view(),
+        &Texture::create_sampler(&context, &SamplerFilterType::Linear),
+        &buffer,
+    );
+
+    build_post_processing_pipeline_with_binding::<Background>(
+        include_str!("../../res/shaders/background.wgsl"),
+        &mut commands,
+        &context,
+        binding,
+        layout,
+    );
+
+    let bloom_texture = Texture::empty(
         context.config.dimensions,
         &context,
         wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -94,7 +164,7 @@ fn startup(mut commands: Commands, context: Res<RenderContext>) {
     let (layout, binding) = bloom_binding(
         &context,
         &pixler.frame_buf.single_texture_view(),
-        &texture.create_view(),
+        &bloom_texture.create_view(),
         &Texture::create_sampler(&context, &SamplerFilterType::Linear),
     );
     build_post_processing_pipeline_with_binding::<Bloom>(
@@ -106,7 +176,9 @@ fn startup(mut commands: Commands, context: Res<RenderContext>) {
     );
 
     commands
-        .insert_resource(BloomTexture(texture))
+        .insert_resource(BloomTexture(bloom_texture))
+        .insert_resource(BackgroundTexture(background_texture))
+        .insert_resource(BackgroundBuffer(buffer))
         .insert_resource(pixler);
 }
 
