@@ -18,5 +18,6 @@ var<uniform> mat: MaterialUniform;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    // return textureSample(texture, texture_sampler, in.uv);
     return mat.modulation;
 }

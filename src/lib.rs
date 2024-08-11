@@ -66,9 +66,9 @@ pub fn run() {
         .run();
 }
 
-pub fn apply_velocity(mut q: Query<(Mut<Transform>, Velocity)>) {
+pub fn apply_velocity(mut q: Query<(Mut<Transform>, Velocity)>, dt: Res<DeltaTime>) {
     for (transform, vel) in q.iter_mut() {
-        transform.translation += vel.0;
+        transform.translation += vel.0 * dt.delta * 100.0;
     }
 }
 
@@ -99,6 +99,17 @@ fn startup(mut commands: Commands, server: Res<AssetServer>, mut clear_color: Re
     ));
 
     commands.spawn(Camera2dBundle::default());
+
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite::default(),
+            material: Material2d {
+                texture: server.load("res/noise/noise.png"),
+                ..Default::default()
+            },
+        },
+        Transform::default(),
+    ));
 
     // commands.spawn((
     //     SpriteBundle {

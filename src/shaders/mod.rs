@@ -1,10 +1,22 @@
-use self::{atoms::NuclearAtom, downscale::Pixler, neutrons::NuclearNeutron, player::Nuclear};
+use crate::shaders::post_processing::build_post_processing_pipeline;
+
+use self::{
+    atoms::NuclearAtom,
+    downscale::Pixler,
+    neutrons::NuclearNeutron,
+    player::Nuclear,
+    post_processing::{
+        bloom_binding, build_post_processing_pipeline_with_binding,
+        build_post_processing_pipeline_with_texture, PostProcessingPipeline,
+    },
+};
 use winny::{math::vector::Vec4f, prelude::*};
 
 pub mod atoms;
 pub mod downscale;
 pub mod neutrons;
 pub mod player;
+pub mod post_processing;
 
 #[derive(Debug)]
 pub struct ShaderArtPlugin;
@@ -15,14 +27,87 @@ impl Plugin for ShaderArtPlugin {
             .add_plugins(MaterialPlugin::<Nuclear>::new())
             .add_plugins(MaterialPlugin::<NuclearAtom>::new())
             .add_plugins(MaterialPlugin::<NuclearNeutron>::new())
+            .register_resource::<PostProcessingPipeline<BrightnessThreshold>>()
+            .register_resource::<PostProcessingPipeline<GaussianBlurH>>()
+            .register_resource::<PostProcessingPipeline<GaussianBlurV>>()
+            .register_resource::<PostProcessingPipeline<Bloom>>()
+            .register_resource::<BloomTexture>()
             .add_systems(Schedule::StartUp, startup)
-            .add_systems(AppSchedule::PreRender, downscale::set_frame_buf)
-            .add_systems(AppSchedule::PostRender, downscale::pixler_render_pass);
+            .add_systems(
+                AppSchedule::PreRender,
+                (downscale::set_frame_buf, post_processing::clear_frame_buf),
+            )
+            .add_systems(
+                AppSchedule::PostRender,
+                (
+                    downscale::buf_to_downsample,
+                    downscale::set_frame_buf,
+                    downscale::downsample_to_view,
+                    post_processing::set_bloom_buf,
+                    post_processing::clear_frame_buf,
+                    post_processing::render_pass::<BrightnessThreshold>,
+                    post_processing::render_pass::<GaussianBlurV>,
+                    post_processing::render_pass::<GaussianBlurH>,
+                    downscale::reset_output_view,
+                    post_processing::render_pass::<Bloom>,
+                ),
+            );
     }
 }
 
+struct BrightnessThreshold;
+struct GaussianBlurH;
+struct GaussianBlurV;
+struct Bloom;
+#[derive(Resource)]
+pub struct BloomTexture(Texture);
+
 fn startup(mut commands: Commands, context: Res<RenderContext>) {
-    commands.insert_resource(Pixler::new(&context));
+    let pixler = Pixler::new(&context);
+    let texture = Texture::empty(
+        context.config.dimensions,
+        &context,
+        wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::RENDER_ATTACHMENT,
+        context.config.format,
+    );
+    build_post_processing_pipeline_with_texture::<BrightnessThreshold>(
+        include_str!("../../res/shaders/brightness_threshold.wgsl"),
+        &mut commands,
+        &context,
+        &pixler.frame_tex,
+        SamplerFilterType::Linear,
+    );
+    build_post_processing_pipeline_with_texture::<GaussianBlurV>(
+        include_str!("../../res/shaders/blur_vertical.wgsl"),
+        &mut commands,
+        &context,
+        &pixler.frame_tex,
+        SamplerFilterType::Linear,
+    );
+    build_post_processing_pipeline_with_texture::<GaussianBlurH>(
+        include_str!("../../res/shaders/blur_horizontal.wgsl"),
+        &mut commands,
+        &context,
+        &pixler.frame_tex,
+        SamplerFilterType::Linear,
+    );
+    let (layout, binding) = bloom_binding(
+        &context,
+        &pixler.frame_buf.single_texture_view(),
+        &texture.create_view(),
+        &Texture::create_sampler(&context, &SamplerFilterType::Linear),
+    );
+    build_post_processing_pipeline_with_binding::<Bloom>(
+        include_str!("../../res/shaders/bloom.wgsl"),
+        &mut commands,
+        &context,
+        binding,
+        layout,
+    );
+
+    commands
+        .insert_resource(BloomTexture(texture))
+        .insert_resource(pixler);
 }
 
 pub trait ColorPalette {

@@ -22,7 +22,7 @@ impl Plugin for AtomPlugin {
             Schedule::StartUp,
             |mut commands: Commands, server: Res<AssetServer>| {
                 let mut rng = rand::thread_rng();
-                for _ in 0..50 {
+                for _ in 0..100 {
                     let x = rng.gen_range(-500f32..500f32);
                     let y = rng.gen_range(-500f32..500f32);
 
