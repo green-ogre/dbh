@@ -8,15 +8,13 @@ pub struct TextPlugin;
 
 impl Plugin for TextPlugin {
     fn build(&mut self, app: &mut App) {
-        app.add_plugins(winny::prelude::TextPlugin::new(
-            "res/fonts/SuperPixel-m2L8j.ttf",
-        ))
-        .register_resource::<TypeWriter>()
-        .register_timer::<TypeWriterTimeout>()
-        .add_systems(
-            Schedule::Update,
-            (increment_type_writer, display_type_writer, display_health).run_if(should_run_game),
-        );
+        app.register_resource::<TypeWriter>()
+            .register_timer::<TypeWriterTimeout>()
+            .add_systems(
+                Schedule::Update,
+                (increment_type_writer, display_type_writer, display_health)
+                    .run_if(should_run_game),
+            );
     }
 }
 

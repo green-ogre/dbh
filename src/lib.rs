@@ -60,17 +60,18 @@ pub fn run() {
             WeaponPlugin,
             CameraPlugin,
             SoundPlugin,
-            ShaderArtPlugin,
         ))
         .egui_resource::<ThreatLevel>()
         .insert_resource(ThreatLevel(1))
         .insert_resource(GameState::Menu)
         .add_plugins((
+            winny::prelude::TextPlugin::new("res/fonts/SuperPixel-m2L8j.ttf"),
+            ShaderArtPlugin,
             AtomPlugin,
             mouse::MousePlugin,
             ChildrenPlugin,
             enemy::EnemyPlugin,
-            TextPlugin,
+            // TextPlugin,
         ))
         // .insert_resource(TypeWriter::new(
         //     "Meltdown ...".into(),
@@ -79,7 +80,9 @@ pub fn run() {
         //     40.0,
         //     Modulation(Vec4f::new(1.0, 1.0, 1.0, 1.0)),
         // ))
-        .add_systems(Schedule::StartUp, startup)
+        // .add_systems(Schedule::StartUp, startup)
+        .add_systems(Schedule::StartUp, pre_menu_startup)
+        .add_systems(Schedule::Update, menu.run_if(should_run_menu))
         .add_systems(
             Schedule::PreUpdate,
             update_threat_level.run_if(should_run_game),
@@ -99,6 +102,10 @@ pub enum GameState {
 
 pub fn should_run_game(game_state: Res<GameState>) -> bool {
     *game_state == GameState::Game
+}
+
+pub fn should_run_menu(game_state: Res<GameState>) -> bool {
+    *game_state == GameState::Menu
 }
 
 pub fn apply_velocity(mut q: Query<(Mut<Transform>, Velocity)>, dt: Res<DeltaTime>) {
@@ -132,15 +139,55 @@ fn update_threat_level(atoms: Query<Atom>, mut threat: ResMut<ThreatLevel>) {
     threat.0 = count as u32 / ENEMEIES_PER_THREAT_LEVEL;
 }
 
+fn pre_menu_startup(mut commands: Commands) {
+    commands.spawn(Camera2dBundle::default());
+}
+
+fn menu(
+    mut commands: Commands,
+    mut text_renderer: Option<ResMut<TextRenderer>>,
+    context: Res<RenderContext>,
+    reader: EventReader<KeyInput>,
+    mut game_state: ResMut<GameState>,
+) {
+    let Some(text_renderer) = &mut text_renderer else {
+        return;
+    };
+    use winny::gfx::wgpu_text::glyph_brush::*;
+
+    text_renderer.draw(&context, || {
+        let color: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+        let middle = Section::default()
+            .add_text(Text::new("MELTDOWN").with_scale(50.0).with_color(color))
+            .with_bounds((
+                context.config.width() as f32,
+                context.config.height() as f32,
+            ))
+            .with_screen_position((context.config.width() as f32 / 2.0, 100.0))
+            .with_layout(
+                Layout::default()
+                    .h_align(HorizontalAlign::Center)
+                    .v_align(VerticalAlign::Center),
+            );
+
+        vec![middle]
+    });
+
+    if reader.peak().is_some() {
+        commands.run_system_once_when(startup, |_: Commands| true);
+        *game_state = GameState::Game;
+    }
+}
+
 fn startup(
     mut commands: Commands,
     server: Res<AssetServer>,
     mut clear_color: ResMut<ClearColor>,
-    mut audio: ResMut<GlobalAudio>,
+    // mut audio: ResMut<GlobalAudio>,
     // type_writer: Res<TypeWriter>,
 ) {
     // type_writer.start(&mut commands);
-    audio.volume = 0.0;
+    // audio.volume = 0.0;
     clear_color.0 = Modulation(SpaceHaze::dark_blue());
     // #[cfg(target_arch = "wasm32")]
     // server.set_prefix(
@@ -156,8 +203,6 @@ fn startup(
         },
         WatchForAsset,
     ));
-
-    commands.spawn(Camera2dBundle::default());
 
     // commands.spawn((
     //     SpriteBundle {
