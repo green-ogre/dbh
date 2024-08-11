@@ -22,9 +22,11 @@ pub mod audio;
 pub mod bullet;
 pub mod camera;
 pub mod collision;
+pub mod enemy;
 pub mod loader;
 pub mod mouse;
 pub mod player;
+pub mod regular;
 pub mod shaders;
 pub mod types;
 #[cfg(target_arch = "wasm32")]
@@ -47,6 +49,7 @@ pub fn run() {
                 },
                 ..Default::default()
             },
+            regular::RegularPolygonsPlugin,
             TomlPlugin,
             WatcherPlugin,
             CollisionPlugin,
@@ -55,11 +58,16 @@ pub fn run() {
             CameraPlugin,
             SoundPlugin,
             ShaderArtPlugin,
-            ChildrenPlugin,
         ))
         .egui_resource::<ThreatLevel>()
         .insert_resource(ThreatLevel(1))
         .add_plugins((AtomPlugin, mouse::MousePlugin))
+        .add_plugins((
+            AtomPlugin,
+            mouse::MousePlugin,
+            ChildrenPlugin,
+            enemy::EnemyPlugin,
+        ))
         .add_systems(Schedule::StartUp, startup)
         .add_systems(
             Schedule::PostUpdate,
