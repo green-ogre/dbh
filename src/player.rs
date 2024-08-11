@@ -4,15 +4,13 @@ use crate::{
     bullet::NeutronBundle,
     collision::{CircleCollider, Collider},
     mouse::MousePosition,
-    shaders::{player::Nuclear, ColorPalette, Paper8, SpaceHaze},
+    shaders::{player::Nuclear, SpaceHaze},
     Health, Velocity,
 };
-use angle::Radf;
-use camera::Camera;
 use winny::{
     asset::server::AssetServer,
     gfx::{
-        cgmath::{Deg, Quaternion, Rad, Rotation3, Zero},
+        cgmath::{Quaternion, Rad, Rotation3, Zero},
         mesh2d::Mesh2d,
     },
     math::vector::{Vec2f, Vec3f},
@@ -176,6 +174,27 @@ impl PlayerBundle {
             radius: 25.,
         })
     }
+
+    fn shoot_audio(server: &AssetServer) -> AudioBundle {
+        AudioBundle {
+            handle: server.load("res/RPG_Essentials_Free/10_Battle_SFX/51_Flee_02.wav"),
+            playback_settings: PlaybackSettings::default().with_volume(10.0),
+        }
+    }
+
+    fn dash_audio(server: &AssetServer) -> AudioBundle {
+        AudioBundle {
+            handle: server.load("res/RPG_Essentials_Free/12_Player_Movement_SFX/30_Jump_03.wav"),
+            playback_settings: PlaybackSettings::default().with_volume(15.0),
+        }
+    }
+
+    fn hit_audio(server: &AssetServer) -> AudioBundle {
+        AudioBundle {
+            handle: server.load("res/RPG_Essentials_Free/10_Battle_SFX/77_flesh_02.wav"),
+            playback_settings: PlaybackSettings::default().with_volume(10.0),
+        }
+    }
 }
 
 // #[derive(Component)]
@@ -336,6 +355,7 @@ pub fn update_keystate(
     input: EventReader<KeyInput>,
     mut state: ResMut<PressedState>,
     mut player: Query<(Entity, Mut<Dash>), With<Player>>,
+    server: Res<AssetServer>,
 ) {
     for event in input.peak_read() {
         let ks = matches!(event.state, KeyState::Pressed);
@@ -364,6 +384,7 @@ pub fn update_keystate(
                 dash.remaining = dash.duration;
                 dash.cooldown = dash.cooldown_duration;
                 commands.get_entity(player).remove::<Collider>();
+                commands.spawn(PlayerBundle::dash_audio(&server));
             }
         }
     }
@@ -423,6 +444,7 @@ fn watch_click(
             Velocity(direction.normalize() * 4. + velocity.0),
             None,
         ));
+        commands.spawn(PlayerBundle::shoot_audio(&server));
     }
 }
 
