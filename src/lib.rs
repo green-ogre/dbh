@@ -5,7 +5,8 @@ use bullet::{spawner::WeaponPlugin, RadialVelocity};
 use camera::CameraPlugin;
 use collision::CollisionPlugin;
 use enemy::spawn_regular;
-use player::{Crosshair, CrosshairOffset, PlayerBundle, PlayerPlugin};
+use player::{Crosshair, CrosshairOffset, EndGame, PlayerBundle, PlayerPlugin};
+
 use rand::Rng;
 use regular::{RegularPolygons, RegularPolygonsPlugin};
 use shaders::materials::PlayerMaterial;
@@ -15,6 +16,7 @@ use std::f32::consts::TAU;
 use std::io::Read;
 use text::{TextPlugin, TypeWriter};
 use winny::ecs::sets::IntoSystemStorage;
+use winny::gfx::camera::Camera;
 use winny::gfx::cgmath::{Quaternion, Rad, Rotation3};
 use winny::gfx::mesh2d::{Mesh2d, Points};
 use winny::math::vector::Vec4f;
@@ -57,7 +59,9 @@ pub fn run() {
                 ..Default::default()
             },
             RegularPolygonsPlugin,
+            #[cfg(not(target_arch = "wasm32"))]
             TomlPlugin,
+            #[cfg(not(target_arch = "wasm32"))]
             WatcherPlugin,
             CollisionPlugin,
             PlayerPlugin,
@@ -71,6 +75,14 @@ pub fn run() {
         .insert_resource(ThreatLevel(1))
         .insert_resource(GameState::Menu)
         .add_plugins((
+            #[cfg(target_arch = "wasm32")]
+            winny::prelude::TextPlugin::new(format!(
+                "{}/res/fonts/SuperPixel-m2L8j.ttf",
+                wasm::ITCH_PREFIX
+                    .get()
+                    .unwrap_or_else(|| panic!("itch prefix was not set"))
+            )),
+            #[cfg(not(target_arch = "wasm32"))]
             winny::prelude::TextPlugin::new("res/fonts/SuperPixel-m2L8j.ttf"),
             ShaderArtPlugin,
             AtomPlugin,
@@ -95,15 +107,17 @@ pub fn run() {
         )
         .add_systems(
             Schedule::PostUpdate,
-            (apply_velocity, apply_radial_velocity).run_if(should_run_game),
+            (apply_velocity, apply_radial_velocity, end_game).run_if(should_run_game),
         )
+        .add_systems(Schedule::PostUpdate, death_screen.run_if(should_run_death))
         .run();
 }
 
-#[derive(Resource, PartialEq, Eq)]
+#[derive(Resource, PartialEq)]
 pub enum GameState {
     Menu,
     Game,
+    Death(f32),
 }
 
 pub fn should_run_game(game_state: Res<GameState>) -> bool {
@@ -112,6 +126,13 @@ pub fn should_run_game(game_state: Res<GameState>) -> bool {
 
 pub fn should_run_menu(game_state: Res<GameState>) -> bool {
     *game_state == GameState::Menu
+}
+
+pub fn should_run_death(game_state: Res<GameState>) -> bool {
+    match *game_state {
+        GameState::Death(_) => true,
+        _ => false,
+    }
 }
 
 pub fn apply_velocity(mut q: Query<(Mut<Transform>, Velocity)>, dt: Res<DeltaTime>) {
@@ -145,8 +166,15 @@ fn update_threat_level(atoms: Query<Atom>, mut threat: ResMut<ThreatLevel>) {
     threat.0 = count as u32 / ENEMEIES_PER_THREAT_LEVEL;
 }
 
-fn pre_menu_startup(mut commands: Commands) {
+fn pre_menu_startup(mut commands: Commands, server: Res<AssetServer>) {
+    #[cfg(target_arch = "wasm32")]
+    server.set_prefix(
+        wasm::ITCH_PREFIX
+            .get()
+            .unwrap_or_else(|| panic!("itch prefix was not set")),
+    );
     commands.spawn(Camera2dBundle::default());
+    // clear_color.0 = Modulation(SpaceHaze::dark_blue());
 }
 
 fn menu(
@@ -219,6 +247,92 @@ fn menu(
     }
 }
 
+fn death_screen(
+    mut commands: Commands,
+    mut text_renderer: Option<ResMut<TextRenderer>>,
+    context: Res<RenderContext>,
+    reader: EventReader<KeyInput>,
+    mut game_state: ResMut<GameState>,
+    dt: Res<DeltaTime>,
+) {
+    let Some(text_renderer) = &mut text_renderer else {
+        return;
+    };
+    use winny::gfx::wgpu_text::glyph_brush::*;
+
+    text_renderer.draw(&context, || {
+        let color: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+        let meltdown = Section::default()
+            .add_text(
+                Text::new("Thank you for playing!")
+                    .with_scale(50.0)
+                    .with_color(color),
+            )
+            .with_bounds((
+                context.config.width() as f32,
+                context.config.height() as f32,
+            ))
+            .with_screen_position((context.config.width() as f32 / 2.0, 250.0))
+            .with_layout(
+                Layout::default()
+                    .h_align(HorizontalAlign::Center)
+                    .v_align(VerticalAlign::Center),
+            );
+
+        let press_continue = Section::default()
+            .add_text(
+                Text::new("Press any key ...")
+                    .with_scale(35.0)
+                    .with_color(color),
+            )
+            .with_bounds((
+                context.config.width() as f32,
+                context.config.height() as f32,
+            ))
+            .with_screen_position((context.config.width() as f32 / 2.0, 800.0))
+            .with_layout(
+                Layout::default()
+                    .h_align(HorizontalAlign::Center)
+                    .v_align(VerticalAlign::Center),
+            );
+
+        match &mut *game_state {
+            GameState::Death(cooldown) => {
+                *cooldown -= dt.delta;
+                if reader.peak().is_some() && *cooldown <= 0.0 {
+                    commands.run_system_once_when(startup, |_: Commands| true);
+                    *game_state = GameState::Game;
+                    vec![meltdown, press_continue]
+                } else if *cooldown <= 0.0 {
+                    vec![meltdown, press_continue]
+                } else {
+                    vec![meltdown]
+                }
+            }
+            _ => {
+                vec![meltdown]
+            }
+        }
+    });
+}
+
+fn end_game(
+    mut commands: Commands,
+    reader: EventReader<EndGame>,
+    mut game_state: ResMut<GameState>,
+) {
+    if reader.peak().is_some() {
+        commands.run_system_once_when(kill_all_entities, |_: Commands| true);
+        *game_state = GameState::Death(1.0);
+    }
+}
+
+fn kill_all_entities(mut commands: Commands, entities: Query<Entity, Without<Camera>>) {
+    for e in entities.iter() {
+        commands.get_entity(e).despawn();
+    }
+}
+
 fn startup(
     mut commands: Commands,
     server: Res<AssetServer>,
@@ -230,21 +344,14 @@ fn startup(
 ) {
     // type_writer.start(&mut commands);
     // audio.volume = 0.0;
-    clear_color.0 = Modulation(SpaceHaze::dark_blue());
-    // #[cfg(target_arch = "wasm32")]
-    // server.set_prefix(
-    //     wasm::ITCH_PREFIX
-    //         .get()
-    //         .unwrap_or_else(|| panic!("itch prefix was not set")),
-    // );
 
-    #[cfg(not(target_arch = "wasm32"))]
-    commands.spawn((
-        DirWatcherBundle {
-            watcher: DirWatcher::new("res").unwrap(),
-        },
-        WatchForAsset,
-    ));
+    // #[cfg(not(target_arch = "wasm32"))]
+    // commands.spawn((
+    //     DirWatcherBundle {
+    //         watcher: DirWatcher::new("res").unwrap(),
+    //     },
+    //     WatchForAsset,
+    // ));
 
     // commands.spawn((
     //     SpriteBundle {

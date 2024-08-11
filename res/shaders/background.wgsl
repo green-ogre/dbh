@@ -11,6 +11,7 @@ struct VertexOutput {
 struct BackgroundUniform {
   time: f32,
   scroll_speed: f32,
+  _padding: vec2<f32>
 }
 
 @group(0) @binding(2)
