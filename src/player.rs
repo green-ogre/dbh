@@ -23,7 +23,7 @@
 use winny::{
     asset::server::AssetServer,
     gfx::{
-        cgmath::{Quaternion, Zero},
+        cgmath::{Deg, Quaternion, Rad, Rotation3, Zero},
         mesh2d::Mesh2d,
     },
     math::vector::{Vec2f, Vec3f},
@@ -32,9 +32,11 @@ use winny::{
 
 use crate::{
     collision::{CircleCollider, Collider},
+    shaders::Nuclear,
     Health, Velocity,
 };
 
+#[derive(Debug)]
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
@@ -118,6 +120,7 @@ pub struct PlayerBundle {
     health: Health,
     // sprite: SpriteBundle,
     mesh: Handle<Mesh2d>,
+    material: Nuclear,
     last_known_vel: LastKnownVelocity,
     dash: Dash,
 }
@@ -127,7 +130,7 @@ impl PlayerBundle {
         Self {
             transform: Transform {
                 rotation: Quaternion::zero(),
-                scale: Vec2f::new(0.4, -0.4),
+                scale: Vec2f::new(0.6, -0.6),
                 translation: position,
             },
             velocity: Default::default(),
@@ -150,6 +153,12 @@ impl PlayerBundle {
             // },
             dash: Dash::default(),
             mesh: server.load("res/saved/player_mesh.msh"),
+            material: Nuclear {
+                modulation: Modulation::default(),
+                opacity: Opacity::default(),
+                saturation: Saturation::default(),
+                texture: server.load("res/noise/noise.png"),
+            },
         }
     }
 

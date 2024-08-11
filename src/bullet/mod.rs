@@ -4,12 +4,19 @@ use self::spawner::{BulletSpawner, Lifespan, Uptime};
 use crate::{
     audio::AudioMaster,
     collision::{CircleCollider, CollideWithEnemy, Collider},
+    shaders::Nuclear,
     CollisionDamage, Velocity,
 };
 use winny::{
     asset::server::AssetServer,
-    gfx::mesh2d::Mesh2d,
-    math::vector::{Vec2f, Vec3f},
+    gfx::{
+        cgmath::{Quaternion, Rad, Rotation3},
+        mesh2d::Mesh2d,
+    },
+    math::{
+        angle::Radf,
+        vector::{Vec2f, Vec3f},
+    },
     prelude::*,
 };
 
@@ -162,6 +169,8 @@ pub struct FireSkullBundle {
     lifespan: Lifespan,
     uptime: Uptime,
     mesh: Handle<Mesh2d>,
+    material: Nuclear,
+    radial_velocity: RadialVelocity,
 }
 
 impl FireSkullBundle {
@@ -179,6 +188,11 @@ impl FireSkullBundle {
             lifespan: Lifespan(6f32),
             uptime: Uptime(2f32),
             mesh: server.load("res/saved/bullet_1_mesh.msh"),
+            material: default_bullet_material(server),
+            radial_velocity: RadialVelocity {
+                strength: Radf(1.0),
+                total_rotation: Radf(0.0),
+            },
         }
     }
 
@@ -199,5 +213,28 @@ impl FireSkullBundle {
             }
             Self::spawn_audio_bundle(audio_master);
         })
+    }
+}
+
+/// Applies rotation to an entity's transform.
+#[derive(Component, AsEgui, Debug, Clone, Copy)]
+pub struct RadialVelocity {
+    strength: Radf,
+    total_rotation: Radf,
+}
+
+impl RadialVelocity {
+    pub fn update(&mut self, transform: &mut Transform, dt: &DeltaTime) {
+        let rotation = Quaternion::from_angle_z(Rad(self.strength.0 * dt.delta));
+        transform.rotation = transform.rotation * rotation;
+    }
+}
+
+fn default_bullet_material(server: &AssetServer) -> Nuclear {
+    Nuclear {
+        modulation: Modulation::default(),
+        opacity: Opacity::default(),
+        saturation: Saturation::default(),
+        texture: server.load("res/noise/noise.png"),
     }
 }

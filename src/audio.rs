@@ -4,6 +4,7 @@ use winny::asset::server::AssetServer;
 use winny::audio::AudioSource;
 use winny::prelude::*;
 
+#[derive(Debug)]
 pub struct SoundPlugin;
 
 impl Plugin for SoundPlugin {

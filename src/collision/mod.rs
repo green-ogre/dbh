@@ -12,6 +12,7 @@ use winny::{
 // pub mod indicators;
 mod systems;
 
+#[derive(Debug)]
 pub struct CollisionPlugin;
 
 impl Plugin for CollisionPlugin {

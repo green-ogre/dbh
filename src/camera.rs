@@ -5,6 +5,7 @@ use crate::{
 use rand::Rng;
 use winny::{gfx::camera::Camera, math::vector::Vec3f, prelude::*};
 
+#[derive(Debug)]
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {

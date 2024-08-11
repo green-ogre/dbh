@@ -1,20 +1,24 @@
+use super::RadialVelocity;
 use crate::audio::AudioMaster;
 use std::sync::Arc;
 use winny::{asset::server::AssetServer, math::vector::Vec3f, prelude::*};
 
+#[derive(Debug)]
 pub struct WeaponPlugin;
 
 impl Plugin for WeaponPlugin {
     fn build(&mut self, app: &mut App) {
-        app.register_timer::<BulletEvent>().add_systems(
-            Schedule::Update,
-            (
-                initial_emit_bullet,
-                bullet_timer,
-                bullet_remover,
-                bullet_lifetime,
-            ),
-        );
+        app.egui_component::<RadialVelocity>()
+            .register_timer::<BulletEvent>()
+            .add_systems(
+                Schedule::Update,
+                (
+                    initial_emit_bullet,
+                    bullet_timer,
+                    bullet_remover,
+                    bullet_lifetime,
+                ),
+            );
     }
 }
 

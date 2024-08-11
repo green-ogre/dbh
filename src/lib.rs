@@ -1,11 +1,16 @@
 use audio::SoundPlugin;
-use bullet::{spawner::WeaponPlugin, FireSkullBundle};
+use bullet::{spawner::WeaponPlugin, FireSkullBundle, RadialVelocity};
 use camera::CameraPlugin;
 use collision::CollisionPlugin;
 use player::{PlayerBundle, PlayerPlugin};
+use shaders::ShaderArtPlugin;
 use winny::{
     asset::server::AssetServer,
-    gfx::{camera::Camera2dBundle, mesh2d::Mesh2d},
+    gfx::{
+        camera::Camera2dBundle,
+        cgmath::{Quaternion, Rad, Rotation3},
+        mesh2d::Mesh2d,
+    },
     math::vector::{Vec2f, Vec3f},
     prelude::*,
 };
@@ -16,6 +21,7 @@ pub mod camera;
 pub mod collision;
 pub mod loader;
 pub mod player;
+pub mod shaders;
 pub mod types;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
@@ -44,15 +50,28 @@ pub fn run() {
             WeaponPlugin,
             CameraPlugin,
             SoundPlugin,
+            ShaderArtPlugin,
         ))
         .add_systems(Schedule::StartUp, startup)
-        .add_systems(Schedule::PostUpdate, apply_velocity)
+        .add_systems(
+            Schedule::PostUpdate,
+            (apply_velocity, apply_radial_velocity),
+        )
         .run();
 }
 
 pub fn apply_velocity(mut q: Query<(Mut<Transform>, Velocity)>) {
     for (transform, vel) in q.iter_mut() {
         transform.translation += vel.0;
+    }
+}
+
+pub fn apply_radial_velocity(
+    mut q: Query<(Mut<Transform>, Mut<RadialVelocity>)>,
+    dt: Res<DeltaTime>,
+) {
+    for (transform, vel) in q.iter_mut() {
+        vel.update(transform, &dt)
     }
 }
 
