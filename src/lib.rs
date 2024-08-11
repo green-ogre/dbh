@@ -1,5 +1,3 @@
-use std::io::Read;
-
 use atoms::{AtomBundle, AtomPlugin};
 use audio::SoundPlugin;
 use bullet::NeutronBundle;
@@ -10,6 +8,7 @@ use player::{PlayerBundle, PlayerPlugin};
 use rand::Rng;
 use shaders::{ColorPalette, Paper8};
 use shaders::{ShaderArtPlugin, SpaceHaze};
+use std::io::Read;
 use winny::gfx::mesh2d::{Mesh2d, Points};
 use winny::{
     asset::server::AssetServer,
@@ -24,6 +23,7 @@ pub mod bullet;
 pub mod camera;
 pub mod collision;
 pub mod loader;
+pub mod mouse;
 pub mod player;
 pub mod shaders;
 pub mod types;
@@ -57,7 +57,7 @@ pub fn run() {
             ShaderArtPlugin,
             ChildrenPlugin,
         ))
-        .add_plugins(AtomPlugin)
+        .add_plugins((AtomPlugin, mouse::MousePlugin))
         .add_systems(Schedule::StartUp, startup)
         .add_systems(
             Schedule::PostUpdate,
@@ -68,7 +68,7 @@ pub fn run() {
 
 pub fn apply_velocity(mut q: Query<(Mut<Transform>, Velocity)>, dt: Res<DeltaTime>) {
     for (transform, vel) in q.iter_mut() {
-        transform.translation += vel.0 * dt.delta * 100.0;
+        transform.translation += vel.0 * 120. * dt.delta;
     }
 }
 
@@ -141,7 +141,7 @@ fn startup(mut commands: Commands, server: Res<AssetServer>, mut clear_color: Re
 
     commands.spawn(PlayerBundle::new(Vec3f::zero(), &server));
 
-    commands.spawn((NeutronBundle::new_spawner(), Transform::default()));
+    // commands.spawn((NeutronBundle::new_spawner(), Transform::default()));
     // commands.spawn(FireSkullBundle::new(
     //     &server,
     //     Transform::default(),

@@ -4,10 +4,9 @@ use std::f32::consts::PI;
 use crate::{
     audio::AudioMaster,
     collision::{CircleCollider, CollideWithEnemy, Collider},
-    shaders::{neutrons::NuclearNeutron, player::Nuclear, ColorPalette, Paper8, SpaceHaze},
+    shaders::{neutrons::NuclearNeutron, SpaceHaze},
     CollisionDamage, Velocity,
 };
-use spawner::RemoveOnCollision;
 use winny::{
     asset::server::AssetServer,
     gfx::{

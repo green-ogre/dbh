@@ -1,25 +1,14 @@
-// use crate::assets::Background;
-// use crate::collision::{CircleCollider, Collider, PlayerCollideEvent};
-// use crate::enemy::state_machine::{velocity_to_lop, EnemyStateMachine, LopDirection};
-// use crate::enemy::EnemyType;
-// use crate::sounds::{AudioMaster, AudioPath};
-// use crate::weapons::aoe::AoeAttack;
-// use crate::weapons::bullet::FireSkullBundle;
-// use crate::{game_is_running, ChildOf, Health, Velocity};
-// use winny::app::render::RenderContext;
-// use winny::ecs::EntityCommands;
-// use winny::gfx::render_pipeline::material::Material2d;
-// use winny::gfx::sprite::{AnimatedSprite, AnimatedSpriteBundle, SpriteBundle};
-// use winny::{
-//     gfx::{
-//         cgmath::{Quaternion, Zero},
-//         sprite::Sprite,
-//         text::TextRenderer,
-//         transform::Transform,
-//     },
-//     prelude::*,
-// };
+use std::f32::consts::TAU;
 
+use crate::{
+    bullet::NeutronBundle,
+    collision::{CircleCollider, Collider},
+    mouse::MousePosition,
+    shaders::{player::Nuclear, ColorPalette, Paper8, SpaceHaze},
+    Health, Velocity,
+};
+use angle::Radf;
+use camera::Camera;
 use winny::{
     asset::server::AssetServer,
     gfx::{
@@ -30,26 +19,47 @@ use winny::{
     prelude::*,
 };
 
-use crate::{
-    collision::{CircleCollider, Collider},
-    shaders::{player::Nuclear, ColorPalette, Paper8, SpaceHaze},
-    Health, Velocity,
-};
-
 #[derive(Debug)]
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&mut self, app: &mut App) {
         app.insert_resource(PressedState::default())
+            .insert_resource(MousePosition::default())
             .egui_component::<Dash>()
-            // .add_systems(
-            //     Schedule::PostUpdate,
-            //     // level_up_sfx,
-            //     // handle_player_level_up,
-            //     // update_player_ui,
-            // )
-            .add_systems(Schedule::Update, (update_keystate, update_player));
+            .add_systems(
+                Schedule::StartUp,
+                |mut commands: Commands, server: Res<AssetServer>| {
+                    let cross_scale = Vec2f::new(0.2, 0.2);
+
+                    let make = |rotation: f32, offset: Vec3f| {
+                        (
+                            Transform {
+                                rotation: Quaternion::from_angle_z(Rad(rotation)),
+                                scale: cross_scale,
+                                ..Default::default()
+                            },
+                            Crosshair,
+                            server.load::<Mesh2d, _>("res/saved/player_mesh.msh"),
+                            Nuclear {
+                                modulation: Modulation(SpaceHaze::white()),
+                                texture: server.load("res/noise/noise.png"),
+                            },
+                            CrosshairOffset(offset),
+                        )
+                    };
+
+                    let amt = 10.;
+                    commands.spawn(make(0., Vec3f::new(0., amt, 0.)));
+                    commands.spawn(make(TAU * 0.25, Vec3f::new(-amt, 00., 0.)));
+                    commands.spawn(make(TAU * 0.5, Vec3f::new(0., -amt, 0.)));
+                    commands.spawn(make(TAU * 0.75, Vec3f::new(amt, 00., 0.)));
+                },
+            )
+            .add_systems(
+                Schedule::Update,
+                (update_keystate, update_player, watch_click, show_crosshair),
+            );
     }
 }
 
@@ -365,6 +375,55 @@ pub struct PressedState {
     down: bool,
     left: bool,
     right: bool,
+}
+
+#[derive(Debug, Component)]
+pub struct Crosshair;
+
+#[derive(Debug, Component)]
+struct CrosshairOffset(pub Vec3f);
+
+fn show_crosshair(
+    mut q: Query<(Mut<Transform>, CrosshairOffset), With<Crosshair>>,
+    mouse_position: Res<MousePosition>,
+    window: Res<Window>,
+) {
+    window.winit_window.set_cursor_visible(false);
+
+    for (transform, offset) in q.iter_mut() {
+        let mouse: Vec3f = mouse_position.0.into();
+        transform.translation = mouse + offset.0;
+    }
+}
+
+fn watch_click(
+    q: Query<(Transform, Velocity), With<Player>>,
+    reader: EventReader<MouseInput>,
+    position: Res<MousePosition>,
+    mut commands: Commands,
+    server: Res<AssetServer>,
+) {
+    let Some((transform, velocity)) = q.iter().next() else {
+        return;
+    };
+    for event in reader.peak_read() {
+        if event.button != MouseButton::Left || event.state == KeyState::Released {
+            continue;
+        }
+
+        let position: Vec3f = position.0.into();
+        let direction = position - transform.translation;
+        commands.spawn(NeutronBundle::new(
+            &server,
+            Transform {
+                translation: transform.translation,
+                scale: Vec2f::one(),
+                ..Default::default()
+            },
+            Velocity(direction.normalize() * 4. + velocity.0),
+            None,
+        ));
+    }
 }
 
 // pub fn update_player_ui(

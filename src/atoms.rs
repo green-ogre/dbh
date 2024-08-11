@@ -1,7 +1,7 @@
 use crate::{
     bullet::{NeutronBundle, Progenitor},
     collision::{CircleCollider, Collider, EnemyCollideEvent},
-    shaders::{atoms::NuclearAtom, ColorPalette, Paper8, SpaceHaze},
+    shaders::{atoms::NuclearAtom, SpaceHaze},
     CollisionDamage, Enemy, GetOrLog, RandomDirectionIterator, Velocity,
 };
 use angle::Radf;
