@@ -20,7 +20,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     result += textureSample(input_texture, input_sampler, in.uv).rgb * weight_0;
 
-    let blur_direction = vec2<f32>(1.0, 0.0);
+    let blur_direction = vec2<f32>(1.5, 0.0);
 
     let offset_1 = blur_direction * pixel;
     let offset_2 = blur_direction * 2.0 * pixel;

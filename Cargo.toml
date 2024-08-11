@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-winny = { path = "winny", features = [] }
+winny = { path = "winny", features = ["editor"] }
 fxhash = "0.2.1"
 pollster = "0.3.0"
 bytemuck = { version = "1.12", features = ["derive"] }

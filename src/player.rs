@@ -388,7 +388,7 @@ fn show_crosshair(
     mouse_position: Res<MousePosition>,
     window: Res<Window>,
 ) {
-    window.winit_window.set_cursor_visible(false);
+    // window.winit_window.set_cursor_visible(false);
 
     for (transform, offset) in q.iter_mut() {
         let mouse: Vec3f = mouse_position.0.into();

@@ -13,7 +13,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let bloom = textureSample(bloom_texture, texture_sampler, in.uv);
 
     // Adjust bloom intensity
-    let bloom_intensity = 1.7;
+    let bloom_intensity = 1.0;
     let result = original + bloom * bloom_intensity;
 
     return vec4<f32>(result.rgb, 1.0);

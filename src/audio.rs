@@ -9,9 +9,11 @@ pub struct SoundPlugin;
 
 impl Plugin for SoundPlugin {
     fn build(&mut self, app: &mut App) {
-        app.insert_resource(AudioMaster::default())
+        app.register_resource::<Music>()
+            .insert_resource(AudioMaster::default())
             .add_systems(Schedule::StartUp, load_all_sounds)
-            .add_systems(Schedule::PreUpdate, update_sound_queue);
+            .add_systems(Schedule::PostUpdate, update_sound_queue)
+            .add_systems(Schedule::Update, update_music);
     }
 }
 
@@ -66,13 +68,49 @@ pub struct AudioSample {
 #[derive(Component, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct AudioPath(pub &'static str);
 
-fn load_all_sounds(mut _server: ResMut<AssetServer>, mut _audio_map: ResMut<AudioMaster>) {
-    // let paths = [
-    //     // "./res/lop/boss/demonlord",
-    //     "./res/audio/RPG_Essentials_Free",
-    // ];
-    //
-    // for path in paths.into_iter() {
-    //     load_audio_directory(&mut server, path, &mut audio_map);
-    // }
+#[derive(Resource)]
+pub struct Music {
+    track_1: Track,
+    track_2: Track,
+    track_3: Track,
+    track_4: Track,
+}
+
+pub struct Track {
+    handle: Handle<AudioSource>,
+    is_playing: bool,
+}
+
+impl Track {
+    pub fn new(handle: Handle<AudioSource>) -> Self {
+        Self {
+            handle,
+            is_playing: false,
+        }
+    }
+}
+
+fn load_all_sounds(mut commands: Commands, server: Res<AssetServer>) {
+    commands.insert_resource(Music {
+        track_1: Track::new(server.load("res/nuclear jam/jam1.wav")),
+        track_2: Track::new(server.load("res/nuclear jam/jam2.wav")),
+        track_3: Track::new(server.load("res/nuclear jam/jam3.wav")),
+        track_4: Track::new(server.load("res/nuclear jam/jam4.wav")),
+    });
+
+    commands.spawn(AudioBundle {
+        handle: server.load("res/nuclear jam/04_Fire_explosion_04_medium.wav"),
+        playback_settings: PlaybackSettings::default().loop_track(),
+    });
+}
+
+fn update_music(mut commands: Commands, mut music: ResMut<Music>) {
+    if !music.track_1.is_playing {
+        info!("playing stem 1");
+        commands.spawn(AudioBundle {
+            handle: music.track_1.handle.clone(),
+            playback_settings: PlaybackSettings::default().loop_track(),
+        });
+        music.track_1.is_playing = true;
+    }
 }
