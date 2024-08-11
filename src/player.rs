@@ -4,7 +4,7 @@ use crate::{
     bullet::NeutronBundle,
     collision::{CircleCollider, Collider},
     mouse::MousePosition,
-    shaders::{player::Nuclear, SpaceHaze},
+    shaders::{materials::PlayerMaterial, SpaceHaze},
     Health, Velocity,
 };
 use winny::{
@@ -39,9 +39,8 @@ impl Plugin for PlayerPlugin {
                             },
                             Crosshair,
                             server.load::<Mesh2d, _>("res/saved/player_mesh.msh"),
-                            Nuclear {
+                            PlayerMaterial {
                                 modulation: Modulation(SpaceHaze::white()),
-                                texture: server.load("res/noise/noise.png"),
                             },
                             CrosshairOffset(offset),
                         )
@@ -128,7 +127,7 @@ pub struct PlayerBundle {
     health: Health,
     // sprite: SpriteBundle,
     mesh: Handle<Mesh2d>,
-    material: Nuclear,
+    material: PlayerMaterial,
     last_known_vel: LastKnownVelocity,
     dash: Dash,
 }
@@ -161,9 +160,8 @@ impl PlayerBundle {
             // },
             dash: Dash::default(),
             mesh: server.load("res/saved/player_mesh.msh"),
-            material: Nuclear {
+            material: PlayerMaterial {
                 modulation: Modulation(SpaceHaze::white()),
-                texture: server.load("res/noise/noise.png"),
             },
         }
     }

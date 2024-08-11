@@ -3,6 +3,14 @@ use std::f32::consts::TAU;
 use vector::Vec2f;
 use winny::prelude::*;
 
+use crate::shaders::{
+    materials::{
+        HeptaMaterial, HexaMaterial, NonagonMaterial, OctagonMaterial, PentagonMaterial,
+        QuadrilateralMaterial, TriangleMaterial,
+    },
+    SpaceHaze,
+};
+
 #[derive(Debug)]
 pub struct RegularPolygonsPlugin;
 
@@ -34,5 +42,74 @@ impl RegularPolygons {
         let polygons = std::array::from_fn(|i| assets.add(make(i + 3)));
 
         RegularPolygons(polygons)
+    }
+}
+
+#[derive(Debug, Resource, Clone)]
+pub struct PolygonMaterials;
+
+impl PolygonMaterials {
+    pub fn spawn_with_material(commands: &mut Commands, bundle: impl Bundle, index: usize) {
+        match index {
+            6 => {
+                commands.spawn((
+                    bundle,
+                    NonagonMaterial {
+                        modulation: Modulation(SpaceHaze::white()),
+                    },
+                ));
+            }
+            5 => {
+                commands.spawn((
+                    bundle,
+                    OctagonMaterial {
+                        modulation: Modulation(SpaceHaze::purple()),
+                    },
+                ));
+            }
+            4 => {
+                commands.spawn((
+                    bundle,
+                    HeptaMaterial {
+                        modulation: Modulation(SpaceHaze::purple()),
+                    },
+                ));
+            }
+            3 => {
+                commands.spawn((
+                    bundle,
+                    HexaMaterial {
+                        modulation: Modulation(SpaceHaze::purple()),
+                    },
+                ));
+            }
+            2 => {
+                commands.spawn((
+                    bundle,
+                    PentagonMaterial {
+                        modulation: Modulation(SpaceHaze::purple()),
+                    },
+                ));
+            }
+            1 => {
+                commands.spawn((
+                    bundle,
+                    QuadrilateralMaterial {
+                        modulation: Modulation(SpaceHaze::purple()),
+                    },
+                ));
+            }
+            0 => {
+                commands.spawn((
+                    bundle,
+                    TriangleMaterial {
+                        modulation: Modulation(SpaceHaze::purple()),
+                    },
+                ));
+            }
+            _ => {
+                unreachable!()
+            }
+        }
     }
 }

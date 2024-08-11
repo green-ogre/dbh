@@ -1,17 +1,11 @@
 use std::f32::consts::PI;
 
 use angle::Radf;
-use mesh2d::Mesh2d;
 use server::AssetServer;
 use vector::{Vec2f, Vec3f};
 use winny::prelude::*;
 
-use crate::{
-    bullet::RadialVelocity,
-    regular::RegularPolygons,
-    shaders::{atoms::NuclearAtom, SpaceHaze},
-    CollisionDamage, Enemy, Velocity,
-};
+use crate::{bullet::RadialVelocity, regular::RegularPolygons, CollisionDamage, Enemy, Velocity};
 
 #[derive(Debug)]
 pub struct EnemyPlugin;
@@ -39,8 +33,6 @@ pub struct EnemyBundle {
     velocity: Velocity,
     // collider: Collider,
     damage: CollisionDamage,
-    mesh: Handle<Mesh2d>,
-    material: NuclearAtom,
     radial: RadialVelocity,
 }
 
@@ -60,11 +52,6 @@ impl EnemyBundle {
             },
             velocity: Velocity(velocity),
             damage: CollisionDamage(1.),
-            mesh: polygons.0[3].clone(),
-            material: NuclearAtom {
-                modulation: Modulation(SpaceHaze::purple()),
-                texture: server.load("res/noise/noise.png"),
-            },
             radial: RadialVelocity::new(Radf(PI)),
         }
     }

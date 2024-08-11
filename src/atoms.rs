@@ -2,8 +2,7 @@ use crate::{
     bullet::{NeutronBundle, Progenitor, RadialVelocity},
     camera::{PlayerCamera, ScreenShake},
     collision::{CircleCollider, Collider, EnemyCollideEvent},
-    regular::RegularPolygons,
-    shaders::{atoms::NuclearAtom, SpaceHaze},
+    regular::{PolygonMaterials, RegularPolygons},
     CollisionDamage, Enemy, GetOrLog, RandomDirectionIterator, Velocity,
 };
 use angle::Radf;
@@ -22,7 +21,7 @@ impl Plugin for AtomPlugin {
     fn build(&mut self, app: &mut App) {
         app.add_systems(
             AppSchedule::PostStartUp,
-            |mut commands: Commands, server: Res<AssetServer>, polygons: Res<RegularPolygons>| {
+            |mut commands: Commands, polygons: Res<RegularPolygons>| {
                 let mut rng = rand::thread_rng();
                 for _ in 0..10 {
                     let x = rng.gen_range(-500f32..500f32);
@@ -31,14 +30,14 @@ impl Plugin for AtomPlugin {
                     let velocity =
                         Vec3f::new(rng.gen_range(-0.5..0.5), rng.gen_range(-0.5..0.5), 0.);
 
-                    commands.spawn(AtomBundle::new(
+                    AtomBundle::spawn(
+                        &mut commands,
                         Vec3f::new(x, y, 0.),
                         velocity,
                         None,
-                        &server,
                         &polygons,
                         0,
-                    ));
+                    );
                 }
             },
         )
@@ -63,16 +62,29 @@ pub struct AtomBundle {
     events: Events,
     damage: CollisionDamage,
     mesh: Handle<Mesh2d>,
-    material: NuclearAtom,
     radial: RadialVelocity,
 }
 
 impl AtomBundle {
-    pub fn new(
+    pub fn spawn(
+        commands: &mut Commands,
         position: Vec3f,
         velocity: Vec3f,
         progenitor: Option<Entity>,
-        server: &AssetServer,
+        polygons: &RegularPolygons,
+        events: u32,
+    ) {
+        PolygonMaterials::spawn_with_material(
+            commands,
+            Self::new(position, velocity, progenitor, polygons, events),
+            6 - events as usize,
+        );
+    }
+
+    fn new(
+        position: Vec3f,
+        velocity: Vec3f,
+        progenitor: Option<Entity>,
         polygons: &RegularPolygons,
         events: u32,
     ) -> Self {
@@ -93,10 +105,6 @@ impl AtomBundle {
             progenitor: Progenitor(progenitor),
             damage: CollisionDamage(1.),
             mesh: polygons.0[6 - events as usize].clone(),
-            material: NuclearAtom {
-                modulation: Modulation(SpaceHaze::purple()),
-                texture: server.load("res/noise/noise.png"),
-            },
             radial: RadialVelocity::new(Radf(
                 PI + rand::rngs::SmallRng::from_entropy().gen_range(-1f32..1f32),
             )),
@@ -118,7 +126,7 @@ fn handle_neutron(
 
     for (
         (atom, atom_position, atom_velocity, atom_progenitor, events),
-        (bullet, bullet_transform, bullet_velocity, progenitor),
+        (bullet, _bullet_transform, bullet_velocity, progenitor),
     ) in reader.peak_read().filter_map(|e| {
         bullets
             .get_or_log(e.with)
@@ -147,14 +155,14 @@ fn handle_neutron(
         let directions = RandomDirectionIterator::new(direction, Radf(FRAC_PI_2));
 
         for direction in directions.clone().take(2) {
-            commands.spawn(AtomBundle::new(
+            AtomBundle::spawn(
+                &mut commands,
                 atom_position.translation,
                 direction,
                 Some(atom),
-                &server,
                 &polygons,
                 events.0 + 1,
-            ));
+            );
         }
 
         for direction in directions.take(3) {
@@ -173,8 +181,8 @@ fn handle_neutron(
 
     if !already_handled.is_empty() {
         camera.push_screen_shake(ScreenShake::new(
-            20.,
-            0.25,
+            10.,
+            0.15,
             delta.wrapping_elapsed_as_seconds(),
         ));
     }

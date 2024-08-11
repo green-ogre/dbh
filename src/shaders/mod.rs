@@ -1,12 +1,13 @@
 use std::io::{BufReader, Cursor};
 
-use crate::shaders::post_processing::{background_binding, build_post_processing_pipeline};
+use crate::shaders::post_processing::background_binding;
 
 use self::{
-    atoms::NuclearAtom,
     downscale::Pixler,
-    neutrons::NuclearNeutron,
-    player::Nuclear,
+    materials::{
+        HeptaMaterial, HexaMaterial, NeutronMaterial, NonagonMaterial, OctagonMaterial,
+        PentagonMaterial, PlayerMaterial, QuadrilateralMaterial, TriangleMaterial,
+    },
     post_processing::{
         bloom_binding, build_post_processing_pipeline_with_binding,
         build_post_processing_pipeline_with_texture, PostProcessingPipeline,
@@ -14,10 +15,8 @@ use self::{
 };
 use winny::{math::vector::Vec4f, prelude::*};
 
-pub mod atoms;
 pub mod downscale;
-pub mod neutrons;
-pub mod player;
+pub mod materials;
 pub mod post_processing;
 
 #[derive(Debug)]
@@ -26,9 +25,15 @@ pub struct ShaderArtPlugin;
 impl Plugin for ShaderArtPlugin {
     fn build(&mut self, app: &mut App) {
         app.register_resource::<Pixler>()
-            .add_plugins(MaterialPlugin::<Nuclear>::new())
-            .add_plugins(MaterialPlugin::<NuclearAtom>::new())
-            .add_plugins(MaterialPlugin::<NuclearNeutron>::new())
+            .add_plugins(MaterialPlugin::<NonagonMaterial>::new())
+            .add_plugins(MaterialPlugin::<OctagonMaterial>::new())
+            .add_plugins(MaterialPlugin::<HeptaMaterial>::new())
+            .add_plugins(MaterialPlugin::<HexaMaterial>::new())
+            .add_plugins(MaterialPlugin::<PentagonMaterial>::new())
+            .add_plugins(MaterialPlugin::<QuadrilateralMaterial>::new())
+            .add_plugins(MaterialPlugin::<TriangleMaterial>::new())
+            .add_plugins(MaterialPlugin::<PlayerMaterial>::new())
+            .add_plugins(MaterialPlugin::<NeutronMaterial>::new())
             .register_resource::<PostProcessingPipeline<BrightnessThreshold>>()
             .register_resource::<PostProcessingPipeline<GaussianBlurH>>()
             .register_resource::<PostProcessingPipeline<GaussianBlurV>>()

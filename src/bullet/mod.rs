@@ -4,7 +4,7 @@ use std::f32::consts::PI;
 use crate::{
     audio::AudioMaster,
     collision::{CircleCollider, CollideWithEnemy, Collider},
-    shaders::{neutrons::NuclearNeutron, SpaceHaze},
+    shaders::{materials::NeutronMaterial, SpaceHaze},
     CollisionDamage, Velocity,
 };
 use winny::{
@@ -173,7 +173,7 @@ pub struct NeutronBundle {
     lifespan: Lifespan,
     uptime: Uptime,
     mesh: Handle<Mesh2d>,
-    material: NuclearNeutron,
+    material: NeutronMaterial,
     radial_velocity: RadialVelocity,
     progenitor: Progenitor,
 }
@@ -198,9 +198,8 @@ impl NeutronBundle {
             lifespan: Lifespan(6f32),
             uptime: Uptime(0f32),
             mesh: server.load("res/saved/bullet_1_mesh.msh"),
-            material: NuclearNeutron {
+            material: NeutronMaterial {
                 modulation: Modulation(SpaceHaze::pink()),
-                texture: server.load("res/noise/noise.png"),
             },
             radial_velocity: RadialVelocity {
                 strength: Radf(1.0),

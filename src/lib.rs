@@ -1,4 +1,4 @@
-use atoms::{Atom, AtomBundle, AtomPlugin};
+use atoms::{Atom, AtomPlugin};
 use audio::SoundPlugin;
 use bullet::NeutronBundle;
 use bullet::{spawner::WeaponPlugin, RadialVelocity};
