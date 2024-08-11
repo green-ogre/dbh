@@ -1,5 +1,6 @@
+use atoms::AtomPlugin;
 use audio::SoundPlugin;
-use bullet::{spawner::WeaponPlugin, FireSkullBundle};
+use bullet::{spawner::WeaponPlugin, NeutronBundle};
 use camera::CameraPlugin;
 use collision::CollisionPlugin;
 use player::{PlayerBundle, PlayerPlugin};
@@ -10,6 +11,7 @@ use winny::{
     prelude::*,
 };
 
+pub mod atoms;
 pub mod audio;
 pub mod bullet;
 pub mod camera;
@@ -45,6 +47,7 @@ pub fn run() {
             CameraPlugin,
             SoundPlugin,
             ChildrenPlugin,
+            AtomPlugin,
         ))
         .add_systems(Schedule::StartUp, startup)
         .add_systems(Schedule::PostUpdate, apply_velocity)
@@ -105,7 +108,7 @@ fn startup(mut commands: Commands, server: Res<AssetServer>) {
 
     commands.spawn(PlayerBundle::new(Vec3f::zero(), &server));
 
-    commands.spawn((FireSkullBundle::new_spawner(), Transform::default()));
+    commands.spawn((NeutronBundle::new_spawner(), Transform::default()));
     // commands.spawn(FireSkullBundle::new(
     //     &server,
     //     Transform::default(),

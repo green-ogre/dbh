@@ -1,3 +1,5 @@
+use angle::Radf;
+use rand::Rng;
 use winny::{gfx::transform::Transform, math::vector::Vec3f, prelude::*};
 
 #[derive(Debug, Default, Component, Clone, Copy, PartialEq)]
@@ -126,5 +128,74 @@ pub fn manage_parents(
         if c.0.is_empty() {
             commands.get_entity(parent).remove::<Children>();
         }
+    }
+}
+
+pub trait GetOrLog {
+    type Output<'a>
+    where
+        Self: 'a;
+
+    fn get_or_log(&self, entity: Entity) -> Option<Self::Output<'_>>;
+}
+
+impl<T, F> GetOrLog for Query<'_, '_, T, F>
+where
+    T: QueryData,
+    F: Filter,
+{
+    type Output<'a> = <<T as QueryData>::ReadOnly as WorldQuery>::Item<'a> where Self: 'a;
+
+    fn get_or_log(&self, entity: Entity) -> Option<Self::Output<'_>> {
+        match self.get(entity) {
+            None => {
+                let tie = std::any::type_name::<<T as QueryData>::ReadOnly>();
+                tracing_log::log::warn!("expected a value of type {tie}, but found None");
+                None
+            }
+            value => value,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RandomDirectionIterator {
+    direction: Vec3f,
+    angle: f32,
+    rng: rand::rngs::ThreadRng,
+}
+
+impl RandomDirectionIterator {
+    pub fn new(direction: Vec3f, angle: Radf) -> Self {
+        RandomDirectionIterator {
+            direction: direction.normalize(),
+            angle: angle.0,
+            rng: rand::thread_rng(),
+        }
+    }
+}
+
+impl Iterator for RandomDirectionIterator {
+    type Item = Vec3f;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // Generate a random rotation angle within the specified arc
+        let random_angle = self.rng.gen_range(0.0..self.angle);
+        let random_rotation = self.rng.gen_range(0.0..std::f32::consts::TAU);
+
+        // Create an orthonormal basis
+        let u = if self.direction.x.abs() < 0.9 {
+            Vec3f::new(1.0, 0.0, 0.0)
+        } else {
+            Vec3f::new(0.0, 1.0, 0.0)
+        };
+        let v = self.direction.cross(&u).normalize();
+        let w = self.direction.cross(&v);
+
+        // Compute the rotated vector
+        let rotated = self.direction * random_angle.cos()
+            + (v * random_rotation.cos() + w * random_rotation.sin()) * random_angle.sin();
+
+        Some(rotated.normalize())
     }
 }
