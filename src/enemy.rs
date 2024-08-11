@@ -11,19 +11,7 @@ use crate::{bullet::RadialVelocity, regular::RegularPolygons, CollisionDamage, E
 pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
-    fn build(&mut self, app: &mut App) {
-        app.add_systems(
-            AppSchedule::PostStartUp,
-            |mut commands: Commands, server: Res<AssetServer>, polygons: Res<RegularPolygons>| {
-                commands.spawn(EnemyBundle::new(
-                    Default::default(),
-                    Default::default(),
-                    &polygons,
-                    &server,
-                ));
-            },
-        );
-    }
+    fn build(&mut self, _app: &mut App) {}
 }
 
 #[derive(Bundle)]

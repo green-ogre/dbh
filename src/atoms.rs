@@ -1,4 +1,5 @@
 use crate::{
+    audio::AudioMaster,
     bullet::{NeutronBundle, Progenitor, RadialVelocity},
     camera::{PlayerCamera, ScreenShake},
     collision::{CircleCollider, CollideWithPlayer, Collider, EnemyCollideEvent},
@@ -20,28 +21,6 @@ pub struct AtomPlugin;
 impl Plugin for AtomPlugin {
     fn build(&mut self, app: &mut App) {
         app.insert_resource(TotalEvents::default())
-            .add_systems(
-                AppSchedule::PostStartUp,
-                |mut commands: Commands, polygons: Res<RegularPolygons>| {
-                    let mut rng = rand::thread_rng();
-                    for _ in 0..10 {
-                        let x = rng.gen_range(-500f32..500f32);
-                        let y = rng.gen_range(-500f32..500f32);
-
-                        let velocity =
-                            Vec3f::new(rng.gen_range(-0.5..0.5), rng.gen_range(-0.5..0.5), 0.);
-
-                        AtomBundle::spawn(
-                            &mut commands,
-                            Vec3f::new(x, y, 0.),
-                            velocity,
-                            None,
-                            &polygons,
-                            0,
-                        );
-                    }
-                },
-            )
             .add_systems(Schedule::PostUpdate, handle_neutron.run_if(should_run_game));
     }
 }
@@ -75,12 +54,19 @@ impl AtomBundle {
         progenitor: Option<Entity>,
         polygons: &RegularPolygons,
         events: u32,
+        server: &AssetServer,
+        _audio: &mut AudioMaster,
     ) {
         PolygonMaterials::spawn_with_material(
             commands,
             Self::new(position, velocity, progenitor, polygons, events),
             6 - events as usize,
         );
+
+        // audio.queue_bundle(AudioBundle {
+        //     handle: server.load("res/RPG_Essentials_Free/10_Battle_SFX/77_flesh_02.wav"),
+        //     playback_settings: PlaybackSettings::default().with_volume(10.0),
+        // });
     }
 
     fn new(
@@ -128,6 +114,7 @@ fn handle_neutron(
     polygons: Res<RegularPolygons>,
     mut camera: ResMut<PlayerCamera>,
     delta: Res<DeltaTime>,
+    mut audio: ResMut<AudioMaster>,
 ) {
     let mut already_handled = FxHashSet::default();
 
@@ -170,6 +157,8 @@ fn handle_neutron(
                 Some(atom),
                 &polygons,
                 events.0 + 1,
+                &server,
+                &mut audio,
             );
         }
 

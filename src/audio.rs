@@ -60,6 +60,8 @@ fn update_sound_queue(mut commands: Commands, mut master: ResMut<AudioMaster>) {
     if let Some(bundle) = master.queue.pop_front() {
         commands.spawn((bundle, QueuedSound));
     }
+
+    master.queue.drain(..);
 }
 
 #[derive(Debug)]

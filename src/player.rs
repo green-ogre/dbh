@@ -30,34 +30,6 @@ impl Plugin for PlayerPlugin {
             .insert_resource(ShootInfo::default())
             .egui_component::<Dash>()
             .add_systems(
-                Schedule::StartUp,
-                |mut commands: Commands, server: Res<AssetServer>| {
-                    let cross_scale = Vec2f::new(0.2, 0.2);
-
-                    let make = |rotation: f32, offset: Vec3f| {
-                        (
-                            Transform {
-                                rotation: Quaternion::from_angle_z(Rad(rotation)),
-                                scale: cross_scale,
-                                ..Default::default()
-                            },
-                            Crosshair,
-                            server.load::<Mesh2d, _>("res/saved/player_mesh.msh"),
-                            PlayerMaterial {
-                                modulation: Modulation(SpaceHaze::white()),
-                            },
-                            CrosshairOffset(offset),
-                        )
-                    };
-
-                    let amt = 10.;
-                    commands.spawn(make(0., Vec3f::new(0., amt, 0.)));
-                    commands.spawn(make(TAU * 0.25, Vec3f::new(-amt, 00., 0.)));
-                    commands.spawn(make(TAU * 0.5, Vec3f::new(0., -amt, 0.)));
-                    commands.spawn(make(TAU * 0.75, Vec3f::new(amt, 00., 0.)));
-                },
-            )
-            .add_systems(
                 Schedule::Update,
                 (update_keystate, update_player, watch_click, show_crosshair)
                     .run_if(should_run_game),
@@ -437,7 +409,7 @@ pub struct PressedState {
 pub struct Crosshair;
 
 #[derive(Debug, Component)]
-struct CrosshairOffset(pub Vec3f);
+pub struct CrosshairOffset(pub Vec3f);
 
 fn show_crosshair(
     mut q: Query<(Mut<Transform>, CrosshairOffset), With<Crosshair>>,

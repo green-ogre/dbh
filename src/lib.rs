@@ -1,17 +1,20 @@
-use atoms::{Atom, AtomPlugin};
-use audio::SoundPlugin;
+use atoms::{Atom, AtomBundle, AtomPlugin};
+use audio::{AudioMaster, SoundPlugin};
 use bullet::NeutronBundle;
 use bullet::{spawner::WeaponPlugin, RadialVelocity};
 use camera::CameraPlugin;
 use collision::CollisionPlugin;
-use player::{PlayerBundle, PlayerPlugin};
+use player::{Crosshair, CrosshairOffset, PlayerBundle, PlayerPlugin};
 use rand::Rng;
-use regular::RegularPolygonsPlugin;
+use regular::{RegularPolygons, RegularPolygonsPlugin};
+use shaders::materials::PlayerMaterial;
 use shaders::{ColorPalette, Paper8};
 use shaders::{ShaderArtPlugin, SpaceHaze};
+use std::f32::consts::TAU;
 use std::io::Read;
 use text::{TextPlugin, TypeWriter};
 use winny::ecs::sets::IntoSystemStorage;
+use winny::gfx::cgmath::{Quaternion, Rad, Rotation3};
 use winny::gfx::mesh2d::{Mesh2d, Points};
 use winny::math::vector::Vec4f;
 use winny::{
@@ -71,7 +74,7 @@ pub fn run() {
             mouse::MousePlugin,
             ChildrenPlugin,
             enemy::EnemyPlugin,
-            // TextPlugin,
+            TextPlugin,
         ))
         // .insert_resource(TypeWriter::new(
         //     "Meltdown ...".into(),
@@ -157,20 +160,54 @@ fn menu(
 
     text_renderer.draw(&context, || {
         let color: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-        let middle = Section::default()
+        let meltdown = Section::default()
             .add_text(Text::new("MELTDOWN").with_scale(50.0).with_color(color))
             .with_bounds((
                 context.config.width() as f32,
                 context.config.height() as f32,
             ))
-            .with_screen_position((context.config.width() as f32 / 2.0, 100.0))
+            .with_screen_position((context.config.width() as f32 / 2.0, 250.0))
             .with_layout(
                 Layout::default()
                     .h_align(HorizontalAlign::Center)
                     .v_align(VerticalAlign::Center),
             );
 
-        vec![middle]
+        let press_continue = Section::default()
+            .add_text(
+                Text::new("Press any key ...")
+                    .with_scale(35.0)
+                    .with_color(color),
+            )
+            .with_bounds((
+                context.config.width() as f32,
+                context.config.height() as f32,
+            ))
+            .with_screen_position((context.config.width() as f32 / 2.0, 800.0))
+            .with_layout(
+                Layout::default()
+                    .h_align(HorizontalAlign::Center)
+                    .v_align(VerticalAlign::Center),
+            );
+
+        let controls = Section::default()
+            .add_text(
+                Text::new("Dash   -- Shift\nShoot  -- Space / Left Click")
+                    .with_scale(35.0)
+                    .with_color(color),
+            )
+            .with_bounds((
+                context.config.width() as f32,
+                context.config.height() as f32,
+            ))
+            .with_screen_position((180.0, 500.0))
+            .with_layout(
+                Layout::default()
+                    .h_align(HorizontalAlign::Left)
+                    .v_align(VerticalAlign::Center),
+            );
+
+        vec![meltdown, controls, press_continue]
     });
 
     if reader.peak().is_some() {
@@ -183,6 +220,8 @@ fn startup(
     mut commands: Commands,
     server: Res<AssetServer>,
     mut clear_color: ResMut<ClearColor>,
+    mut assets: ResMut<Assets<Mesh2d>>,
+    mut audio: ResMut<AudioMaster>,
     // mut audio: ResMut<GlobalAudio>,
     // type_writer: Res<TypeWriter>,
 ) {
@@ -251,4 +290,49 @@ fn startup(
     //     Transform::default(),
     //     Velocity(Vec3f::new(1.0, 0.0, 0.0)),
     // ));
+
+    let cross_scale = Vec2f::new(0.2, 0.2);
+
+    let make = |rotation: f32, offset: Vec3f| {
+        (
+            Transform {
+                rotation: Quaternion::from_angle_z(Rad(rotation)),
+                scale: cross_scale,
+                ..Default::default()
+            },
+            Crosshair,
+            server.load::<Mesh2d, _>("res/saved/player_mesh.msh"),
+            PlayerMaterial {
+                modulation: Modulation(SpaceHaze::white()),
+            },
+            CrosshairOffset(offset),
+        )
+    };
+
+    let amt = 10.;
+    commands.spawn(make(0., Vec3f::new(0., amt, 0.)));
+    commands.spawn(make(TAU * 0.25, Vec3f::new(-amt, 00., 0.)));
+    commands.spawn(make(TAU * 0.5, Vec3f::new(0., -amt, 0.)));
+    commands.spawn(make(TAU * 0.75, Vec3f::new(amt, 00., 0.)));
+
+    let polygons = RegularPolygons::new(40., &mut assets);
+    let mut rng = rand::thread_rng();
+    for _ in 0..10 {
+        let x = rng.gen_range(-500f32..500f32);
+        let y = rng.gen_range(-500f32..500f32);
+
+        let velocity = Vec3f::new(rng.gen_range(-0.5..0.5), rng.gen_range(-0.5..0.5), 0.);
+
+        AtomBundle::spawn(
+            &mut commands,
+            Vec3f::new(x, y, 0.),
+            velocity,
+            None,
+            &polygons,
+            0,
+            &server,
+            &mut audio,
+        );
+    }
+    commands.insert_resource(polygons);
 }

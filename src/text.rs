@@ -10,11 +10,7 @@ impl Plugin for TextPlugin {
     fn build(&mut self, app: &mut App) {
         app.register_resource::<TypeWriter>()
             .register_timer::<TypeWriterTimeout>()
-            .add_systems(
-                Schedule::Update,
-                (increment_type_writer, display_type_writer, display_health)
-                    .run_if(should_run_game),
-            );
+            .add_systems(Schedule::Update, display_health.run_if(should_run_game));
     }
 }
 
@@ -53,30 +49,30 @@ impl TypeWriter {
     }
 }
 
-fn increment_type_writer(
-    mut commands: Commands,
-    mut type_writer: ResMut<TypeWriter>,
-    type_next_char: EventReader<TypeWriterTimeout>,
-) {
-    let mut recieved_event = false;
-    for _ in type_next_char.read() {
-        if type_writer.last_len == type_writer.string.len() {
-            type_writer.last_len = 0;
-            type_writer.slice_range = 0..0;
-        } else {
-            type_writer.last_len += 1;
-            type_writer.slice_range = 0..type_writer.last_len;
-        }
-        recieved_event = true;
-    }
-
-    if recieved_event {
-        commands.spawn(Timer::<TypeWriterTimeout>::new(
-            type_writer.speed,
-            TypeWriterTimeout,
-        ));
-    }
-}
+// fn increment_type_writer(
+//     mut commands: Commands,
+//     mut type_writer: ResMut<TypeWriter>,
+//     type_next_char: EventReader<TypeWriterTimeout>,
+// ) {
+//     let mut recieved_event = false;
+//     for _ in type_next_char.read() {
+//         if type_writer.last_len == type_writer.string.len() {
+//             type_writer.last_len = 0;
+//             type_writer.slice_range = 0..0;
+//         } else {
+//             type_writer.last_len += 1;
+//             type_writer.slice_range = 0..type_writer.last_len;
+//         }
+//         recieved_event = true;
+//     }
+//
+//     if recieved_event {
+//         commands.spawn(Timer::<TypeWriterTimeout>::new(
+//             type_writer.speed,
+//             TypeWriterTimeout,
+//         ));
+//     }
+// }
 
 fn display_type_writer(
     context: Res<RenderContext>,
@@ -121,9 +117,8 @@ fn display_health(
     let mut string = String::new();
     string.push_str("[");
     let hit_points = (player_health.ratio() * 10.0) as usize;
-    let hit_points = 5;
     for i in 0..10 {
-        if hit_points > i {
+        if hit_points >= i {
             string.push_str(" * ");
         } else {
             string.push_str("   ");
