@@ -21,5 +21,5 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let color = textureSample(texture, texture_sampler, in.uv * 2.0 + vec2(background.time, background.time) * background.scroll_speed);
     let gray = dot(color.rgb, vec3<f32>(0.299, 0.587, 0.114));
     let gray_scale = vec4<f32>(gray, gray, gray, color.a);
-    return gray_scale * vec4(11.0 / 255.0, 6.0 / 255.0, 48.0 / 255.0, 1.0);
+    return gray_scale * vec4(23.0 / 255.0, 0.0 / 255.0, 29.0 / 255.0, 1.0);
 }

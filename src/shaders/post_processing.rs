@@ -97,6 +97,42 @@ pub fn build_post_processing_pipeline_with_binding<T: 'static + Sync + Send>(
     ));
 }
 
+pub fn build_post_processing_pipeline_with_binding_and_vert_shader<T: 'static + Sync + Send>(
+    vert: &'static str,
+    frag: &'static str,
+    commands: &mut Commands,
+    context: &RenderContext,
+    binding: wgpu::BindGroup,
+    layout: wgpu::BindGroupLayout,
+) {
+    let vert_shader = VertexShader({
+        let shader = wgpu::ShaderModuleDescriptor {
+            label: None,
+            source: wgpu::ShaderSource::Wgsl(vert.into()),
+        };
+        context.device.create_shader_module(shader)
+    });
+
+    let frag_shader = FragmentShader({
+        let shader = wgpu::ShaderModuleDescriptor {
+            label: None,
+            source: wgpu::ShaderSource::Wgsl(frag.into()),
+        };
+        context.device.create_shader_module(shader)
+    });
+
+    commands.insert_resource(
+        PostProcessingPipeline::<T>::new_with_binding_and_vert_shader(
+            "post",
+            &context,
+            vert_shader,
+            frag_shader,
+            binding,
+            layout,
+        ),
+    );
+}
+
 #[derive(Resource)]
 pub struct PostProcessingPipeline<T: 'static + Sync + Send> {
     pipeline: RenderPipeline2d,
@@ -105,6 +141,32 @@ pub struct PostProcessingPipeline<T: 'static + Sync + Send> {
 }
 
 impl<T: 'static + Sync + Send> PostProcessingPipeline<T> {
+    pub fn new_with_binding_and_vert_shader(
+        label: &str,
+        context: &RenderContext,
+        vert_shader: VertexShader,
+        frag_shader: FragmentShader,
+        binding: wgpu::BindGroup,
+        layout: wgpu::BindGroupLayout,
+    ) -> Self {
+        let pipeline = RenderPipeline2d::new(
+            label,
+            context,
+            &[&layout],
+            &[],
+            &vert_shader,
+            &frag_shader,
+            wgpu::BlendState::ALPHA_BLENDING,
+            None,
+        );
+
+        Self {
+            pipeline,
+            binding: Some(binding),
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn new_with_binding(
         label: &str,
         context: &RenderContext,
@@ -298,7 +360,7 @@ pub fn bloom_binding(
     (layout, binding)
 }
 
-pub fn background_binding(
+pub fn texture_with_uniform_binding(
     context: &RenderContext,
     texture: &wgpu::TextureView,
     sampler: &wgpu::Sampler,

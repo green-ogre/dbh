@@ -1,5 +1,6 @@
 use fxhash::{FxHashMap, FxHashSet};
 use winny::{
+    ecs::sets::IntoSystemStorage,
     gfx::cgmath::{Matrix4, Quaternion, Zero},
     math::{
         matrix::{scale_matrix4x4f, translation_matrix4x4f, Matrix4x4f},
@@ -7,6 +8,8 @@ use winny::{
     },
     prelude::*,
 };
+
+use crate::should_run_game;
 
 pub mod indicators;
 mod spatial;
@@ -28,7 +31,8 @@ impl Plugin for CollisionPlugin {
                     systems::update_player_collision,
                     systems::update_enemy_collision,
                     indicators::manage_indicators,
-                ),
+                )
+                    .run_if(should_run_game),
             );
     }
 }

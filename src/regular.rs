@@ -8,7 +8,7 @@ use crate::shaders::{
         HeptaMaterial, HexaMaterial, NonagonMaterial, OctagonMaterial, PentagonMaterial,
         QuadrilateralMaterial, TriangleMaterial,
     },
-    SpaceHaze,
+    Crimson, SpaceHaze,
 };
 
 #[derive(Debug)]
@@ -55,7 +55,7 @@ impl PolygonMaterials {
                 commands.spawn((
                     bundle,
                     NonagonMaterial {
-                        modulation: Modulation(SpaceHaze::white()),
+                        modulation: Modulation(Crimson::color(0)),
                     },
                 ));
             }
@@ -63,7 +63,7 @@ impl PolygonMaterials {
                 commands.spawn((
                     bundle,
                     OctagonMaterial {
-                        modulation: Modulation(SpaceHaze::purple()),
+                        modulation: Modulation(Crimson::color(1)),
                     },
                 ));
             }
@@ -71,7 +71,7 @@ impl PolygonMaterials {
                 commands.spawn((
                     bundle,
                     HeptaMaterial {
-                        modulation: Modulation(SpaceHaze::purple()),
+                        modulation: Modulation(Crimson::color(2)),
                     },
                 ));
             }
@@ -79,7 +79,7 @@ impl PolygonMaterials {
                 commands.spawn((
                     bundle,
                     HexaMaterial {
-                        modulation: Modulation(SpaceHaze::purple()),
+                        modulation: Modulation(Crimson::color(3)),
                     },
                 ));
             }
@@ -87,7 +87,7 @@ impl PolygonMaterials {
                 commands.spawn((
                     bundle,
                     PentagonMaterial {
-                        modulation: Modulation(SpaceHaze::purple()),
+                        modulation: Modulation(Crimson::color(9)),
                     },
                 ));
             }
@@ -95,7 +95,7 @@ impl PolygonMaterials {
                 commands.spawn((
                     bundle,
                     QuadrilateralMaterial {
-                        modulation: Modulation(SpaceHaze::purple()),
+                        modulation: Modulation(Crimson::color(8)),
                     },
                 ));
             }
@@ -103,7 +103,7 @@ impl PolygonMaterials {
                 commands.spawn((
                     bundle,
                     TriangleMaterial {
-                        modulation: Modulation(SpaceHaze::purple()),
+                        modulation: Modulation(Crimson::color(7)),
                     },
                 ));
             }

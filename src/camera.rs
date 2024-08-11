@@ -4,11 +4,12 @@ use crate::{
     loader::LoaderApp,
     mouse::MousePosition,
     player::{DirectionalVelocity, Player},
+    should_run_game,
 };
 use noise::NoiseFn;
 use rand::{Rng, SeedableRng};
 use vector::Vec2f;
-use winny::{gfx::camera::Camera, math::vector::Vec3f, prelude::*};
+use winny::{ecs::sets::IntoSystemStorage, gfx::camera::Camera, math::vector::Vec3f, prelude::*};
 
 #[derive(Debug)]
 pub struct CameraPlugin;
@@ -25,7 +26,7 @@ impl Plugin for CameraPlugin {
             //     start_time: 0.0,
             // })
             // .add_systems(Schedule::Update, shake_screen)
-            .add_systems(Schedule::PostUpdate, update_camera);
+            .add_systems(Schedule::PostUpdate, update_camera.run_if(should_run_game));
     }
 }
 

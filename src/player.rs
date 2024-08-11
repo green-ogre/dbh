@@ -5,10 +5,11 @@ use crate::{
     collision::{CircleCollider, Collider},
     mouse::MousePosition,
     shaders::{materials::PlayerMaterial, SpaceHaze},
-    Health, Velocity,
+    should_run_game, Health, Velocity,
 };
 use winny::{
     asset::server::AssetServer,
+    ecs::sets::IntoSystemStorage,
     gfx::{
         cgmath::{Quaternion, Rad, Rotation3, Zero},
         mesh2d::Mesh2d,
@@ -56,7 +57,8 @@ impl Plugin for PlayerPlugin {
             )
             .add_systems(
                 Schedule::Update,
-                (update_keystate, update_player, watch_click, show_crosshair),
+                (update_keystate, update_player, watch_click, show_crosshair)
+                    .run_if(should_run_game),
             );
     }
 }
@@ -417,7 +419,7 @@ fn show_crosshair(
     mouse_position: Res<MousePosition>,
     window: Res<Window>,
 ) {
-    // window.winit_window.set_cursor_visible(false);
+    window.winit_window.set_cursor_visible(false);
 
     for (transform, offset) in q.iter_mut() {
         let mouse: Vec3f = mouse_position.0.into();

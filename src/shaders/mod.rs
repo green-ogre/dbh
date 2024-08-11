@@ -1,6 +1,8 @@
 use std::io::{BufReader, Cursor};
 
-use crate::shaders::post_processing::background_binding;
+use crate::{
+    player::Player, shaders::post_processing::texture_with_uniform_binding, should_run_game, Health,
+};
 
 use self::{
     downscale::Pixler,
@@ -13,7 +15,7 @@ use self::{
         build_post_processing_pipeline_with_texture, PostProcessingPipeline,
     },
 };
-use winny::{math::vector::Vec4f, prelude::*};
+use winny::{ecs::sets::IntoSystemStorage, math::vector::Vec4f, prelude::*};
 
 pub mod downscale;
 pub mod materials;
@@ -45,8 +47,15 @@ impl Plugin for ShaderArtPlugin {
             .add_systems(
                 AppSchedule::PreRender,
                 (
+                    // update_player_health_buffer,
                     downscale::set_frame_buf,
                     post_processing::clear_frame_buf,
+                )
+                    .run_if(should_run_game),
+            )
+            .add_systems(
+                AppSchedule::PreRender,
+                (
                     update_background_uniform,
                     post_processing::render_pass::<Background>,
                 ),
@@ -64,7 +73,9 @@ impl Plugin for ShaderArtPlugin {
                     post_processing::render_pass::<GaussianBlurH>,
                     downscale::reset_output_view,
                     post_processing::render_pass::<Bloom>,
-                ),
+                    // post_processing::render_pass::<PlayerHealth>,
+                )
+                    .run_if(should_run_game),
             );
     }
 }
@@ -83,7 +94,6 @@ struct BackGroundUniform {
 const BACKGROUND_SCROLL_SPEED: f32 = 0.2;
 
 fn update_background_uniform(
-    pipeline: ResMut<PostProcessingPipeline<Background>>,
     context: Res<RenderContext>,
     buffer: Res<BackgroundBuffer>,
     dt: Res<DeltaTime>,
@@ -98,6 +108,24 @@ fn update_background_uniform(
     );
 }
 
+// fn update_player_health_buffer(
+//     context: Res<RenderContext>,
+//     buffer: Res<PlayerHealthBuffer>,
+//     player: Query<Health, With<Player>>,
+// ) {
+//     let Ok(health) = player.get_single() else {
+//         return;
+//     };
+//
+//     context.queue.write_buffer(
+//         &buffer.0,
+//         0,
+//         bytemuck::cast_slice(&[PlayerHealthUniform {
+//             health: health.ratio(),
+//         }]),
+//     );
+// }
+
 struct BrightnessThreshold;
 struct GaussianBlurH;
 struct GaussianBlurV;
@@ -108,8 +136,8 @@ pub struct BloomTexture(Texture);
 fn startup(mut commands: Commands, context: Res<RenderContext>) {
     let pixler = Pixler::new(&context);
 
-    let bytes = std::fs::read("res/textures/nuclear_background.png").unwrap();
-    let reader = ByteReader::new(BufReader::new(Cursor::new(bytes)));
+    let bytes = include_bytes!("../../res/textures/nuclear_background.png");
+    let reader = ByteReader::new(BufReader::new(Cursor::new(bytes.to_vec())));
     let img = Image::new(reader, ImageSettings::default()).unwrap();
     let background_texture = Texture::from_image(&context.device, &context.queue, &img);
 
@@ -124,7 +152,7 @@ fn startup(mut commands: Commands, context: Res<RenderContext>) {
             }]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
-    let (layout, binding) = background_binding(
+    let (layout, binding) = texture_with_uniform_binding(
         &context,
         &background_texture.create_view(),
         &Texture::create_sampler(&context, &SamplerFilterType::Linear),
@@ -219,5 +247,34 @@ impl SpaceHaze {
 
     pub fn pink() -> Vec4f {
         Vec4f::new(204.0 / 255.0, 52.0 / 255.0, 149.0 / 255.0, 1.0)
+    }
+}
+
+fn hex_to_vec4(hex: u32) -> Vec4f {
+    Vec4f::new(
+        ((hex >> 16) & 0xFF) as f32,
+        ((hex >> 8) & 0xFF) as f32,
+        (hex & 0xFF) as f32,
+        1.0,
+    )
+}
+
+pub struct Crimson;
+
+impl Crimson {
+    pub fn color(index: usize) -> Vec4f {
+        match index.clamp(0, 9) {
+            0 => hex_to_vec4(0xff0546),
+            1 => hex_to_vec4(0x9c173b),
+            2 => hex_to_vec4(0x660f31),
+            3 => hex_to_vec4(0x450327),
+            4 => hex_to_vec4(0x270022),
+            5 => hex_to_vec4(0x17001d),
+            6 => hex_to_vec4(0x09010d),
+            7 => hex_to_vec4(0x0ce6f2),
+            8 => hex_to_vec4(0x0098db),
+            9 => hex_to_vec4(0x1e579c),
+            _ => unreachable!(),
+        }
     }
 }

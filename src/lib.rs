@@ -11,6 +11,7 @@ use shaders::{ColorPalette, Paper8};
 use shaders::{ShaderArtPlugin, SpaceHaze};
 use std::io::Read;
 use text::{TextPlugin, TypeWriter};
+use winny::ecs::sets::IntoSystemStorage;
 use winny::gfx::mesh2d::{Mesh2d, Points};
 use winny::math::vector::Vec4f;
 use winny::{
@@ -63,6 +64,7 @@ pub fn run() {
         ))
         .egui_resource::<ThreatLevel>()
         .insert_resource(ThreatLevel(1))
+        .insert_resource(GameState::Menu)
         .add_plugins((
             AtomPlugin,
             mouse::MousePlugin,
@@ -70,20 +72,33 @@ pub fn run() {
             enemy::EnemyPlugin,
             TextPlugin,
         ))
-        .insert_resource(TypeWriter::new(
-            "Meltdown ...".into(),
-            0.1,
-            Vec2f::new(500., 500.),
-            40.0,
-            Modulation(Vec4f::new(1.0, 1.0, 1.0, 1.0)),
-        ))
+        // .insert_resource(TypeWriter::new(
+        //     "Meltdown ...".into(),
+        //     0.1,
+        //     Vec2f::new(500., 500.),
+        //     40.0,
+        //     Modulation(Vec4f::new(1.0, 1.0, 1.0, 1.0)),
+        // ))
         .add_systems(Schedule::StartUp, startup)
-        .add_systems(Schedule::PreUpdate, update_threat_level)
+        .add_systems(
+            Schedule::PreUpdate,
+            update_threat_level.run_if(should_run_game),
+        )
         .add_systems(
             Schedule::PostUpdate,
-            (apply_velocity, apply_radial_velocity),
+            (apply_velocity, apply_radial_velocity).run_if(should_run_game),
         )
         .run();
+}
+
+#[derive(Resource, PartialEq, Eq)]
+pub enum GameState {
+    Menu,
+    Game,
+}
+
+pub fn should_run_game(game_state: Res<GameState>) -> bool {
+    *game_state == GameState::Game
 }
 
 pub fn apply_velocity(mut q: Query<(Mut<Transform>, Velocity)>, dt: Res<DeltaTime>) {
@@ -122,17 +137,17 @@ fn startup(
     server: Res<AssetServer>,
     mut clear_color: ResMut<ClearColor>,
     mut audio: ResMut<GlobalAudio>,
-    type_writer: Res<TypeWriter>,
+    // type_writer: Res<TypeWriter>,
 ) {
-    type_writer.start(&mut commands);
+    // type_writer.start(&mut commands);
     audio.volume = 0.0;
     clear_color.0 = Modulation(SpaceHaze::dark_blue());
-    #[cfg(target_arch = "wasm32")]
-    server.set_prefix(
-        wasm::ITCH_PREFIX
-            .get()
-            .unwrap_or_else(|| panic!("itch prefix was not set")),
-    );
+    // #[cfg(target_arch = "wasm32")]
+    // server.set_prefix(
+    //     wasm::ITCH_PREFIX
+    //         .get()
+    //         .unwrap_or_else(|| panic!("itch prefix was not set")),
+    // );
 
     #[cfg(not(target_arch = "wasm32"))]
     commands.spawn((
@@ -144,16 +159,16 @@ fn startup(
 
     commands.spawn(Camera2dBundle::default());
 
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite::default(),
-            material: Material2d {
-                texture: server.load("res/noise/noise.png"),
-                ..Default::default()
-            },
-        },
-        Transform::default(),
-    ));
+    // commands.spawn((
+    //     SpriteBundle {
+    //         sprite: Sprite::default(),
+    //         material: Material2d {
+    //             texture: server.load("res/noise/noise.png"),
+    //             ..Default::default()
+    //         },
+    //     },
+    //     Transform::default(),
+    // ));
 
     // commands.spawn((
     //     SpriteBundle {

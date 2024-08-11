@@ -1,5 +1,7 @@
 use std::ops::Range;
-use winny::{math::vector::Vec2f, prelude::*};
+use winny::{ecs::sets::IntoSystemStorage, math::vector::Vec2f, prelude::*};
+
+use crate::{player::Player, should_run_game, Health};
 
 #[derive(Debug)]
 pub struct TextPlugin;
@@ -13,7 +15,7 @@ impl Plugin for TextPlugin {
         .register_timer::<TypeWriterTimeout>()
         .add_systems(
             Schedule::Update,
-            (increment_type_writer, display_type_writer),
+            (increment_type_writer, display_type_writer, display_health).run_if(should_run_game),
         );
     }
 }
@@ -98,6 +100,48 @@ fn display_type_writer(
                 context.config.height() as f32,
             ))
             .with_screen_position((type_writer.position.x, type_writer.position.y))
+            .with_layout(
+                Layout::default()
+                    .h_align(HorizontalAlign::Center)
+                    .v_align(VerticalAlign::Center),
+            );
+
+        vec![middle]
+    });
+}
+
+fn display_health(
+    context: Res<RenderContext>,
+    mut text_renderer: ResMut<TextRenderer>,
+    player: Query<Health, With<Player>>,
+) {
+    use winny::gfx::wgpu_text::glyph_brush::*;
+    let Ok(player_health) = player.get_single() else {
+        return;
+    };
+
+    let mut string = String::new();
+    string.push_str("[");
+    let hit_points = (player_health.ratio() * 10.0) as usize;
+    let hit_points = 5;
+    for i in 0..10 {
+        if hit_points > i {
+            string.push_str(" * ");
+        } else {
+            string.push_str("   ");
+        }
+    }
+    string.push_str("]");
+
+    text_renderer.draw(&context, || {
+        let color: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+        let middle = Section::default()
+            .add_text(Text::new(&string).with_scale(30.).with_color(color))
+            .with_bounds((
+                context.config.width() as f32,
+                context.config.height() as f32,
+            ))
+            .with_screen_position((context.config.width() as f32 / 2.0, 30.0))
             .with_layout(
                 Layout::default()
                     .h_align(HorizontalAlign::Center)

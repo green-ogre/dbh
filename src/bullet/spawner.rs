@@ -1,7 +1,9 @@
 use super::RadialVelocity;
-use crate::{audio::AudioMaster, collision::EnemyCollideEvent};
+use crate::{audio::AudioMaster, collision::EnemyCollideEvent, should_run_game};
 use std::sync::Arc;
-use winny::{asset::server::AssetServer, math::vector::Vec3f, prelude::*};
+use winny::{
+    asset::server::AssetServer, ecs::sets::IntoSystemStorage, math::vector::Vec3f, prelude::*,
+};
 
 #[derive(Debug)]
 pub struct WeaponPlugin;
@@ -17,12 +19,13 @@ impl Plugin for WeaponPlugin {
                     bullet_timer,
                     bullet_remover,
                     bullet_lifetime,
-                ),
+                )
+                    .run_if(should_run_game),
             );
         app.register_timer::<BulletEvent>()
             .add_systems(
                 Schedule::Update,
-                (initial_emit_bullet, bullet_timer, bullet_lifetime),
+                (initial_emit_bullet, bullet_timer, bullet_lifetime).run_if(should_run_game),
             )
             .add_systems(Schedule::PostUpdate, bullet_remover);
     }

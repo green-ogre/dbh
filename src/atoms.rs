@@ -3,7 +3,7 @@ use crate::{
     camera::{PlayerCamera, ScreenShake},
     collision::{CircleCollider, Collider, EnemyCollideEvent},
     regular::{PolygonMaterials, RegularPolygons},
-    CollisionDamage, Enemy, GetOrLog, RandomDirectionIterator, Velocity,
+    should_run_game, CollisionDamage, Enemy, GetOrLog, RandomDirectionIterator, Velocity,
 };
 use angle::Radf;
 use fxhash::FxHashSet;
@@ -12,7 +12,7 @@ use rand::{Rng, SeedableRng};
 use server::AssetServer;
 use std::f32::consts::{FRAC_PI_2, PI};
 use vector::{Vec2f, Vec3f};
-use winny::prelude::*;
+use winny::{ecs::sets::IntoSystemStorage, prelude::*};
 
 #[derive(Debug)]
 pub struct AtomPlugin;
@@ -41,7 +41,7 @@ impl Plugin for AtomPlugin {
                 }
             },
         )
-        .add_systems(Schedule::PostUpdate, handle_neutron);
+        .add_systems(Schedule::PostUpdate, handle_neutron.run_if(should_run_game));
     }
 }
 
