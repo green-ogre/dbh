@@ -441,7 +441,7 @@ fn watch_click(
                 scale: Vec2f::one(),
                 ..Default::default()
             },
-            Velocity(direction.normalize() * 4. + velocity.0),
+            Velocity(direction.normalize() * 8. + velocity.0),
             None,
         ));
         commands.spawn(PlayerBundle::shoot_audio(&server));

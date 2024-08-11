@@ -42,9 +42,10 @@ pub fn run() {
                     title: "dbh",
                     close_on_escape: true,
                     #[cfg(target_arch = "wasm32")]
-                    window_size: Vec2f::new(1280., 720.),
+                    window_size: Vec2f::new(1000., 1000.),
                     #[cfg(not(target_arch = "wasm32"))]
-                    window_size: Vec2f::new(1920., 1080.),
+                    window_size: Vec2f::new(1600., 1600.),
+                    viewport_size: Vec2f::new(1200., 1200.),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -61,7 +62,6 @@ pub fn run() {
         ))
         .egui_resource::<ThreatLevel>()
         .insert_resource(ThreatLevel(1))
-        .add_plugins((AtomPlugin, mouse::MousePlugin))
         .add_plugins((
             AtomPlugin,
             mouse::MousePlugin,
