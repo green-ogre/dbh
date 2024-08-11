@@ -57,6 +57,8 @@ pub fn run() {
             ShaderArtPlugin,
             ChildrenPlugin,
         ))
+        .egui_resource::<ThreatLevel>()
+        .insert_resource(ThreatLevel(1))
         .add_plugins((AtomPlugin, mouse::MousePlugin))
         .add_systems(Schedule::StartUp, startup)
         .add_systems(
@@ -78,6 +80,15 @@ pub fn apply_radial_velocity(
 ) {
     for (transform, vel) in q.iter_mut() {
         vel.update(transform, &dt)
+    }
+}
+
+#[derive(Resource, AsEgui)]
+pub struct ThreatLevel(pub u32);
+
+impl Default for ThreatLevel {
+    fn default() -> Self {
+        Self(1)
     }
 }
 

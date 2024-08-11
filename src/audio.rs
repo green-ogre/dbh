@@ -4,6 +4,8 @@ use winny::asset::server::AssetServer;
 use winny::audio::AudioSource;
 use winny::prelude::*;
 
+use crate::ThreatLevel;
+
 #[derive(Debug)]
 pub struct SoundPlugin;
 
@@ -78,14 +80,14 @@ pub struct Music {
 
 pub struct Track {
     handle: Handle<AudioSource>,
-    is_playing: bool,
+    entity: Option<Entity>,
 }
 
 impl Track {
     pub fn new(handle: Handle<AudioSource>) -> Self {
         Self {
             handle,
-            is_playing: false,
+            entity: None,
         }
     }
 }
@@ -97,20 +99,77 @@ fn load_all_sounds(mut commands: Commands, server: Res<AssetServer>) {
         track_3: Track::new(server.load("res/nuclear jam/jam3.wav")),
         track_4: Track::new(server.load("res/nuclear jam/jam4.wav")),
     });
-
-    commands.spawn(AudioBundle {
-        handle: server.load("res/nuclear jam/04_Fire_explosion_04_medium.wav"),
-        playback_settings: PlaybackSettings::default().loop_track(),
-    });
 }
 
-fn update_music(mut commands: Commands, mut music: ResMut<Music>) {
-    if !music.track_1.is_playing {
+fn update_music(
+    mut commands: Commands,
+    mut music: ResMut<Music>,
+    reader: EventReader<ExitingStream>,
+    threat: Res<ThreatLevel>,
+) {
+    for entity in reader.read() {
+        if Some(entity.0) == music.track_1.entity {
+            music.track_1.entity = None;
+        } else if Some(entity.0) == music.track_2.entity {
+            music.track_2.entity = None;
+        } else if Some(entity.0) == music.track_3.entity {
+            music.track_3.entity = None;
+        } else if Some(entity.0) == music.track_4.entity {
+            music.track_4.entity = None;
+        }
+    }
+
+    if music.track_1.entity.is_none() {
         info!("playing stem 1");
-        commands.spawn(AudioBundle {
-            handle: music.track_1.handle.clone(),
-            playback_settings: PlaybackSettings::default().loop_track(),
-        });
-        music.track_1.is_playing = true;
+        music.track_1.entity = Some(
+            commands
+                .spawn(AudioBundle {
+                    handle: music.track_1.handle.clone(),
+                    playback_settings: PlaybackSettings::default().loop_track().with_volume(250.0),
+                })
+                .entity(),
+        );
+
+        if music.track_2.entity.is_none() && threat.0 >= 2 {
+            info!("playing stem 2");
+            music.track_2.entity = Some(
+                commands
+                    .spawn(AudioBundle {
+                        handle: music.track_2.handle.clone(),
+                        playback_settings: PlaybackSettings::default()
+                            .loop_track()
+                            .with_volume(250.0),
+                    })
+                    .entity(),
+            );
+        }
+
+        if music.track_3.entity.is_none() && threat.0 >= 3 {
+            info!("playing stem 3");
+            music.track_3.entity = Some(
+                commands
+                    .spawn(AudioBundle {
+                        handle: music.track_3.handle.clone(),
+                        playback_settings: PlaybackSettings::default()
+                            .loop_track()
+                            .with_volume(250.0),
+                    })
+                    .entity(),
+            );
+        }
+
+        if music.track_4.entity.is_none() && threat.0 >= 4 {
+            info!("playing stem 4");
+            music.track_4.entity = Some(
+                commands
+                    .spawn(AudioBundle {
+                        handle: music.track_4.handle.clone(),
+                        playback_settings: PlaybackSettings::default()
+                            .loop_track()
+                            .with_volume(250.0),
+                    })
+                    .entity(),
+            );
+        }
     }
 }
