@@ -14,20 +14,48 @@ pub fn update_player_collision(
     let p_coll = p_coll.absolute(p_trans);
     let set = &mut map.0;
 
-    for (entity, transform, collider) in colliders.iter() {
-        let absolute_enemy = collider.absolute(transform);
+    let mut spatial = SpatialHash::new(100.);
 
-        let collision = absolute_enemy.collides_with(&p_coll);
+    for (entity, transform, collider) in colliders.iter() {
+        let absolute = collider.absolute(transform);
+        spatial.insert(SpatialData {
+            entity,
+            position: absolute.position(),
+            collider: absolute,
+        });
+    }
+
+    for SpatialData {
+        entity: se,
+        collider: sc,
+        ..
+    } in spatial.nearby_objects(&p_coll.position())
+    {
+        let collision = p_coll.collides_with(sc);
 
         if collision {
-            if set.insert(entity) {
-                writer.send(PlayerCollideEvent { with: entity });
-                info!("Player collision entered!");
+            if set.insert(*se) {
+                writer.send(PlayerCollideEvent { with: *se });
             }
-        } else if set.remove(&entity) {
-            // info!("Player collision exited!");
+        } else if set.remove(se) {
+            // info!("Enemy collision exited!");
         }
     }
+
+    // for (entity, transform, collider) in colliders.iter() {
+    //     let absolute_enemy = collider.absolute(transform);
+
+    //     let collision = absolute_enemy.collides_with(&p_coll);
+
+    //     if collision {
+    //         if set.insert(entity) {
+    //             writer.send(PlayerCollideEvent { with: entity });
+    //             info!("Player collision entered!");
+    //         }
+    //     } else if set.remove(&entity) {
+    //         // info!("Player collision exited!");
+    //     }
+    // }
 }
 
 pub fn update_enemy_collision(

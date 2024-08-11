@@ -3,7 +3,9 @@ use std::f32::consts::PI;
 
 use crate::{
     audio::AudioMaster,
-    collision::{CircleCollider, CollideWithEnemy, Collider},
+    collision::{
+        CircleCollider, CollideWithEnemy, CollideWithPlayer, Collider, RemoveOnPlayerCollision,
+    },
     shaders::{materials::NeutronMaterial, SpaceHaze},
     CollisionDamage, Velocity,
 };
@@ -179,14 +181,17 @@ pub struct NeutronBundle {
 }
 
 impl NeutronBundle {
-    pub fn new(
+    pub fn spawn(
         server: &AssetServer,
         mut transform: Transform,
         velocity: Velocity,
         progenitor: Option<Entity>,
-    ) -> Self {
+        hit_player: bool,
+        commands: &mut Commands,
+    ) {
         transform.scale = Vec2f::new(0.1, 0.1);
-        Self {
+
+        let bundle = Self {
             transform,
             velocity,
             collider: Collider::Circle(CircleCollider {
@@ -194,7 +199,7 @@ impl NeutronBundle {
                 radius: 30f32,
             }),
             collides: CollideWithEnemy,
-            damage: CollisionDamage(2f32),
+            damage: CollisionDamage(0.1),
             lifespan: Lifespan(6f32),
             uptime: Uptime(0f32),
             mesh: server.load("res/saved/bullet_1_mesh.msh"),
@@ -206,6 +211,12 @@ impl NeutronBundle {
                 total_rotation: Radf(0.0),
             },
             progenitor: Progenitor(progenitor),
+        };
+
+        if hit_player {
+            commands.spawn((bundle, CollideWithPlayer, RemoveOnPlayerCollision));
+        } else {
+            commands.spawn(bundle);
         }
     }
 
@@ -222,7 +233,9 @@ impl NeutronBundle {
                 let x = direction.cos() * SPEED;
                 let y = direction.sin() * SPEED;
                 let velocity = Velocity(Vec3f::new(x, y, 0.));
-                commands.spawn(Self::new(server, *transform, velocity, None));
+                // commands.spawn(Self::new(server, *transform, velocity, None));
+
+                Self::spawn(server, *transform, velocity, None, true, commands);
             }
             Self::spawn_audio_bundle(audio_master);
         })

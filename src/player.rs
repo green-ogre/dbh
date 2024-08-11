@@ -2,10 +2,12 @@ use std::f32::consts::{FRAC_PI_2, TAU};
 
 use crate::{
     bullet::NeutronBundle,
-    collision::{CircleCollider, Collider},
+    collision::{
+        CircleCollider, CollideWithPlayer, Collider, PlayerCollideEvent, RemoveOnPlayerCollision,
+    },
     mouse::MousePosition,
     shaders::{materials::PlayerMaterial, SpaceHaze},
-    should_run_game, Health, Velocity,
+    should_run_game, CollisionDamage, Health, Velocity,
 };
 use winny::{
     asset::server::AssetServer,
@@ -59,7 +61,8 @@ impl Plugin for PlayerPlugin {
                 Schedule::Update,
                 (update_keystate, update_player, watch_click, show_crosshair)
                     .run_if(should_run_game),
-            );
+            )
+            .add_systems(Schedule::PostUpdate, apply_damage);
     }
 }
 
@@ -291,6 +294,28 @@ impl PlayerBundle {
 
 const PLAYER_SPEED: f32 = 5.0;
 
+fn apply_damage(
+    mut q: Query<Mut<Health>, With<Player>>,
+    damage: Query<(CollisionDamage, Option<RemoveOnPlayerCollision>), With<CollideWithPlayer>>,
+    reader: EventReader<PlayerCollideEvent>,
+    mut commands: Commands,
+) {
+    let Some(health) = q.iter_mut().next() else {
+        return;
+    };
+
+    for event in reader.peak_read() {
+        if let Some((damage, remove)) = damage.get(event.with) {
+            health.set_current(health.current() - damage.0);
+            warn!("hp: {}", health.current());
+
+            if remove.is_some() {
+                commands.get_entity(event.with).despawn();
+            }
+        }
+    }
+}
+
 pub fn update_player(
     mut commands: Commands,
     mut q: Query<
@@ -443,7 +468,7 @@ fn watch_click(
     server: Res<AssetServer>,
     delta: Res<DeltaTime>,
 ) {
-    let Some((transform, velocity)) = q.iter().next() else {
+    let Some((transform, _velocity)) = q.iter().next() else {
         return;
     };
 
@@ -478,7 +503,7 @@ fn watch_click(
 
         let position: Vec3f = position.0.into();
         let direction = position - transform.translation;
-        commands.spawn(NeutronBundle::new(
+        NeutronBundle::spawn(
             &server,
             Transform {
                 translation: transform.translation,
@@ -487,7 +512,9 @@ fn watch_click(
             },
             Velocity(direction.normalize() * 8.),
             None,
-        ));
+            false,
+            &mut commands,
+        );
         commands.spawn(PlayerBundle::shoot_audio(&server));
     }
 

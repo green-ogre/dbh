@@ -55,6 +55,9 @@ pub struct EnemyCollideEvent {
 #[derive(Debug, Component, Clone, Copy)]
 pub struct CollideWithPlayer;
 
+#[derive(Debug, Component, Clone, Copy)]
+pub struct RemoveOnPlayerCollision;
+
 /// A marker component that indicates this entity should
 /// collide with enemies.
 #[derive(Debug, Component, Clone, Copy)]

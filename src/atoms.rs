@@ -1,7 +1,7 @@
 use crate::{
     bullet::{NeutronBundle, Progenitor, RadialVelocity},
     camera::{PlayerCamera, ScreenShake},
-    collision::{CircleCollider, Collider, EnemyCollideEvent},
+    collision::{CircleCollider, CollideWithPlayer, Collider, EnemyCollideEvent},
     regular::{PolygonMaterials, RegularPolygons},
     should_run_game, CollisionDamage, Enemy, GetOrLog, RandomDirectionIterator, Velocity,
 };
@@ -19,29 +19,30 @@ pub struct AtomPlugin;
 
 impl Plugin for AtomPlugin {
     fn build(&mut self, app: &mut App) {
-        app.add_systems(
-            AppSchedule::PostStartUp,
-            |mut commands: Commands, polygons: Res<RegularPolygons>| {
-                let mut rng = rand::thread_rng();
-                for _ in 0..10 {
-                    let x = rng.gen_range(-500f32..500f32);
-                    let y = rng.gen_range(-500f32..500f32);
+        app.insert_resource(TotalEvents::default())
+            .add_systems(
+                AppSchedule::PostStartUp,
+                |mut commands: Commands, polygons: Res<RegularPolygons>| {
+                    let mut rng = rand::thread_rng();
+                    for _ in 0..10 {
+                        let x = rng.gen_range(-500f32..500f32);
+                        let y = rng.gen_range(-500f32..500f32);
 
-                    let velocity =
-                        Vec3f::new(rng.gen_range(-0.5..0.5), rng.gen_range(-0.5..0.5), 0.);
+                        let velocity =
+                            Vec3f::new(rng.gen_range(-0.5..0.5), rng.gen_range(-0.5..0.5), 0.);
 
-                    AtomBundle::spawn(
-                        &mut commands,
-                        Vec3f::new(x, y, 0.),
-                        velocity,
-                        None,
-                        &polygons,
-                        0,
-                    );
-                }
-            },
-        )
-        .add_systems(Schedule::PostUpdate, handle_neutron.run_if(should_run_game));
+                        AtomBundle::spawn(
+                            &mut commands,
+                            Vec3f::new(x, y, 0.),
+                            velocity,
+                            None,
+                            &polygons,
+                            0,
+                        );
+                    }
+                },
+            )
+            .add_systems(Schedule::PostUpdate, handle_neutron.run_if(should_run_game));
     }
 }
 
@@ -63,6 +64,7 @@ pub struct AtomBundle {
     damage: CollisionDamage,
     mesh: Handle<Mesh2d>,
     radial: RadialVelocity,
+    with_player: CollideWithPlayer,
 }
 
 impl AtomBundle {
@@ -108,9 +110,13 @@ impl AtomBundle {
             radial: RadialVelocity::new(Radf(
                 PI + rand::rngs::SmallRng::from_entropy().gen_range(-1f32..1f32),
             )),
+            with_player: CollideWithPlayer,
         }
     }
 }
+
+#[derive(Debug, Resource, Default)]
+pub struct TotalEvents(pub usize);
 
 fn handle_neutron(
     q: Query<(Entity, Transform, Velocity, Progenitor, Events), With<Atom>>,
@@ -118,6 +124,7 @@ fn handle_neutron(
     reader: EventReader<EnemyCollideEvent>,
     mut commands: Commands,
     server: Res<AssetServer>,
+    mut total_events: ResMut<TotalEvents>,
     polygons: Res<RegularPolygons>,
     mut camera: ResMut<PlayerCamera>,
     delta: Res<DeltaTime>,
@@ -142,6 +149,7 @@ fn handle_neutron(
 
         commands.get_entity(atom).despawn();
         commands.get_entity(bullet).despawn();
+        total_events.0 += 1;
 
         if events.0 >= 6 {
             continue;
@@ -166,7 +174,7 @@ fn handle_neutron(
         }
 
         for direction in directions.take(3) {
-            commands.spawn(NeutronBundle::new(
+            NeutronBundle::spawn(
                 &server,
                 Transform {
                     translation: atom_position.translation,
@@ -175,7 +183,9 @@ fn handle_neutron(
                 },
                 Velocity(direction * 2.),
                 Some(atom),
-            ));
+                true,
+                &mut commands,
+            );
         }
     }
 
