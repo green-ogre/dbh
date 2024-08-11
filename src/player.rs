@@ -28,10 +28,17 @@ impl Plugin for PlayerPlugin {
         app.insert_resource(PressedState::default())
             .insert_resource(MousePosition::default())
             .insert_resource(ShootInfo::default())
+            .register_event::<EndGame>()
             .egui_component::<Dash>()
             .add_systems(
                 Schedule::Update,
-                (update_keystate, update_player, watch_click, show_crosshair)
+                (
+                    update_keystate,
+                    update_player,
+                    watch_click,
+                    show_crosshair,
+                    check_for_player_death,
+                )
                     .run_if(should_run_game),
             )
             .add_systems(Schedule::PostUpdate, apply_damage);
@@ -491,6 +498,22 @@ fn watch_click(
     }
 
     shoot.timer -= delta.delta;
+}
+
+#[derive(Event)]
+pub struct EndGame;
+
+pub fn check_for_player_death(
+    player: Query<Health, With<Player>>,
+    mut writer: EventWriter<EndGame>,
+) {
+    let Ok(health) = player.get_single() else {
+        return;
+    };
+
+    if health.is_depleted() {
+        writer.send(EndGame);
+    }
 }
 
 // pub fn update_player_ui(

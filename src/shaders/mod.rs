@@ -90,6 +90,8 @@ pub struct BackgroundBuffer(wgpu::Buffer);
 struct BackGroundUniform {
     time: f32,
     scroll_speed: f32,
+    // WEBGL
+    _padding: [f32; 2],
 }
 const BACKGROUND_SCROLL_SPEED: f32 = 0.2;
 
@@ -104,6 +106,7 @@ fn update_background_uniform(
         bytemuck::cast_slice(&[BackGroundUniform {
             time: dt.wrapping_elapsed_as_seconds(),
             scroll_speed: BACKGROUND_SCROLL_SPEED,
+            _padding: [0.0; 2],
         }]),
     );
 }
@@ -149,6 +152,7 @@ fn startup(mut commands: Commands, context: Res<RenderContext>) {
             contents: bytemuck::cast_slice(&[BackGroundUniform {
                 time: 0.0,
                 scroll_speed: BACKGROUND_SCROLL_SPEED,
+                _padding: [0.0; 2],
             }]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
