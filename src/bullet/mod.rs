@@ -7,6 +7,7 @@ use crate::{
     shaders::Nuclear,
     CollisionDamage, Velocity,
 };
+use spawner::RemoveOnCollision;
 use winny::{
     asset::server::AssetServer,
     gfx::{
@@ -159,8 +160,12 @@ pub mod spawner;
 //     }
 // }
 
+/// Holds on to the entity that spawned it if any.
+#[derive(Component, Clone, Copy, PartialEq, Eq)]
+pub struct Progenitor(pub Option<Entity>);
+
 #[derive(Bundle)]
-pub struct FireSkullBundle {
+pub struct NeutronBundle {
     transform: Transform,
     velocity: Velocity,
     collider: Collider,
@@ -171,10 +176,16 @@ pub struct FireSkullBundle {
     mesh: Handle<Mesh2d>,
     material: Nuclear,
     radial_velocity: RadialVelocity,
+    progenitor: Progenitor,
 }
 
-impl FireSkullBundle {
-    pub fn new(server: &AssetServer, mut transform: Transform, velocity: Velocity) -> Self {
+impl NeutronBundle {
+    pub fn new(
+        server: &AssetServer,
+        mut transform: Transform,
+        velocity: Velocity,
+        progenitor: Option<Entity>,
+    ) -> Self {
         transform.scale = Vec2f::new(0.1, 0.1);
         Self {
             transform,
@@ -193,6 +204,7 @@ impl FireSkullBundle {
                 strength: Radf(1.0),
                 total_rotation: Radf(0.0),
             },
+            progenitor: Progenitor(progenitor),
         }
     }
 
@@ -209,7 +221,7 @@ impl FireSkullBundle {
                 let x = direction.cos() * SPEED;
                 let y = direction.sin() * SPEED;
                 let velocity = Velocity(Vec3f::new(x, y, 0.));
-                commands.spawn(Self::new(server, transform.clone(), velocity));
+                commands.spawn(Self::new(server, *transform, velocity, None));
             }
             Self::spawn_audio_bundle(audio_master);
         })

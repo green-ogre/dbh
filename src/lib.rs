@@ -1,5 +1,10 @@
+use atoms::AtomPlugin;
 use audio::SoundPlugin;
+<<<<<<< HEAD
 use bullet::{spawner::WeaponPlugin, FireSkullBundle, RadialVelocity};
+=======
+use bullet::{spawner::WeaponPlugin, NeutronBundle};
+>>>>>>> dcab5f8fc61107d2641975d1d2d07a8e55518e50
 use camera::CameraPlugin;
 use collision::CollisionPlugin;
 use player::{PlayerBundle, PlayerPlugin};
@@ -15,6 +20,7 @@ use winny::{
     prelude::*,
 };
 
+pub mod atoms;
 pub mod audio;
 pub mod bullet;
 pub mod camera;
@@ -50,7 +56,12 @@ pub fn run() {
             WeaponPlugin,
             CameraPlugin,
             SoundPlugin,
+<<<<<<< HEAD
             ShaderArtPlugin,
+=======
+            ChildrenPlugin,
+            AtomPlugin,
+>>>>>>> dcab5f8fc61107d2641975d1d2d07a8e55518e50
         ))
         .add_systems(Schedule::StartUp, startup)
         .add_systems(
@@ -123,7 +134,7 @@ fn startup(mut commands: Commands, server: Res<AssetServer>) {
 
     commands.spawn(PlayerBundle::new(Vec3f::zero(), &server));
 
-    commands.spawn((FireSkullBundle::new_spawner(), Transform::default()));
+    commands.spawn((NeutronBundle::new_spawner(), Transform::default()));
     // commands.spawn(FireSkullBundle::new(
     //     &server,
     //     Transform::default(),

@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 use super::RadialVelocity;
 use crate::audio::AudioMaster;
+=======
+use crate::{audio::AudioMaster, collision::EnemyCollideEvent};
+>>>>>>> dcab5f8fc61107d2641975d1d2d07a8e55518e50
 use std::sync::Arc;
 use winny::{asset::server::AssetServer, math::vector::Vec3f, prelude::*};
 
@@ -8,6 +12,7 @@ pub struct WeaponPlugin;
 
 impl Plugin for WeaponPlugin {
     fn build(&mut self, app: &mut App) {
+<<<<<<< HEAD
         app.egui_component::<RadialVelocity>()
             .register_timer::<BulletEvent>()
             .add_systems(
@@ -19,6 +24,14 @@ impl Plugin for WeaponPlugin {
                     bullet_lifetime,
                 ),
             );
+=======
+        app.register_timer::<BulletEvent>()
+            .add_systems(
+                Schedule::Update,
+                (initial_emit_bullet, bullet_timer, bullet_lifetime),
+            )
+            .add_systems(Schedule::PostUpdate, bullet_remover);
+>>>>>>> dcab5f8fc61107d2641975d1d2d07a8e55518e50
     }
 }
 
@@ -124,14 +137,14 @@ pub fn bullet_timer(
 
 pub fn bullet_remover(
     bullets: Query<RemoveOnCollision>,
-    // events: EventReader<EnemyCollideEvent>,
+    events: EventReader<EnemyCollideEvent>,
     mut commands: Commands,
 ) {
-    // for event in events.peak_read() {
-    //     if bullets.get(event.with).is_some() {
-    //         commands.get_entity(event.with).despawn();
-    //     }
-    // }
+    for event in events.peak_read() {
+        if bullets.get(event.with).is_some() {
+            commands.get_entity(event.with).despawn();
+        }
+    }
 }
 
 pub fn bullet_lifetime(
