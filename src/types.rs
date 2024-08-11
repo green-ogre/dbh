@@ -1,5 +1,5 @@
 use angle::Radf;
-use rand::Rng;
+use rand::{Rng, SeedableRng};
 use winny::{gfx::transform::Transform, math::vector::Vec3f, prelude::*};
 
 #[derive(Debug, Default, Component, Clone, Copy, PartialEq)]
@@ -162,16 +162,22 @@ where
 #[derive(Debug, Clone)]
 pub struct RandomDirectionIterator {
     direction: Vec3f,
+    orthog: Vec3f,
     angle: f32,
-    rng: rand::rngs::ThreadRng,
+    rng: rand::rngs::SmallRng,
 }
 
 impl RandomDirectionIterator {
     pub fn new(direction: Vec3f, angle: Radf) -> Self {
         RandomDirectionIterator {
-            direction: direction.normalize(),
+            direction,
+            orthog: if direction.x.abs() < 0.9 {
+                Vec3f::new(1.0, 0.0, 0.0)
+            } else {
+                Vec3f::new(0.0, 1.0, 0.0)
+            },
             angle: angle.0,
-            rng: rand::thread_rng(),
+            rng: rand::rngs::SmallRng::from_entropy(),
         }
     }
 }
@@ -184,13 +190,7 @@ impl Iterator for RandomDirectionIterator {
         let random_angle = self.rng.gen_range(0.0..self.angle);
         let random_rotation = self.rng.gen_range(0.0..std::f32::consts::TAU);
 
-        // Create an orthonormal basis
-        let u = if self.direction.x.abs() < 0.9 {
-            Vec3f::new(1.0, 0.0, 0.0)
-        } else {
-            Vec3f::new(0.0, 1.0, 0.0)
-        };
-        let v = self.direction.cross(&u).normalize();
+        let v = self.direction.cross(&self.orthog).normalize();
         let w = self.direction.cross(&v);
 
         // Compute the rotated vector

@@ -1,6 +1,6 @@
-use crate::{player::Player, Enemy};
-
 use super::*;
+use crate::{player::Player, Enemy};
+use spatial::{SpatialData, SpatialHash};
 
 pub fn update_player_collision(
     colliders: Query<(Entity, Transform, Collider), With<CollideWithPlayer>>,
@@ -11,11 +11,11 @@ pub fn update_player_collision(
     let Some((p_trans, p_coll)) = player.iter().next() else {
         return;
     };
-    let p_coll = p_coll.absolute(p_trans, None);
+    let p_coll = p_coll.absolute(p_trans);
     let set = &mut map.0;
 
     for (entity, transform, collider) in colliders.iter() {
-        let absolute_enemy = collider.absolute(transform, None);
+        let absolute_enemy = collider.absolute(transform);
 
         let collision = absolute_enemy.collides_with(&p_coll);
 
@@ -36,24 +36,38 @@ pub fn update_enemy_collision(
     mut map: ResMut<EnemyCollisionMap>,
     mut writer: EventWriter<EnemyCollideEvent>,
 ) {
-    let log = colliders.iter().next().is_some();
+    // the grid size is very small because there's not much penalty for sparse grid distribution
+    let mut spatial = SpatialHash::new(100.);
 
-    for (enemy, e_trans, e_coll) in enemies.iter() {
-        let absolute_enemy = e_coll.absolute(e_trans, log.then_some("Enemy"));
-        let entry = map.0.entry(enemy).or_default();
+    // first fill the spatial hash grid. We insert the colliders because we expect there to be more of them.
+    for (entity, transform, collider) in colliders.iter() {
+        let absolute = collider.absolute(transform);
+        spatial.insert(SpatialData {
+            entity,
+            position: absolute.position(),
+            collider: absolute,
+        });
+    }
 
-        for (entity, transform, collider) in colliders.iter() {
-            let absolute = collider.absolute(transform, log.then_some("Player"));
+    // Then do collision checking on them
+    for (entity, transform, collider) in enemies.iter() {
+        let absolute = collider.absolute(transform);
+        let entry = map.0.entry(entity).or_default();
 
-            let collision = absolute.collides_with(&absolute_enemy);
+        for SpatialData {
+            entity: se,
+            collider: sc,
+            ..
+        } in spatial.nearby_objects(&absolute.position())
+        {
+            let collision = absolute.collides_with(sc);
 
             if collision {
                 if entry.insert(entity) {
                     writer.send(EnemyCollideEvent {
-                        enemy,
-                        with: entity,
+                        enemy: entity,
+                        with: *se,
                     });
-                    // info!("Enemy collision entered!");
                 }
             } else if entry.remove(&entity) {
                 // info!("Enemy collision exited!");

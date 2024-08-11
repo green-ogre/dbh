@@ -22,7 +22,7 @@ impl Plugin for AtomPlugin {
             Schedule::StartUp,
             |mut commands: Commands, server: Res<AssetServer>| {
                 let mut rng = rand::thread_rng();
-                for _ in 0..20 {
+                for _ in 0..50 {
                     let x = rng.gen_range(-500f32..500f32);
                     let y = rng.gen_range(-500f32..500f32);
 
@@ -116,7 +116,7 @@ fn handle_neutron(
             .get_or_log(e.with)
             .and_then(|b| Some((q.get_or_log(e.enemy)?, b)))
     }) {
-        if events.0 >= 5 || !already_handled.insert(atom) {
+        if !already_handled.insert(atom) {
             continue;
         }
         match (atom_progenitor.0, progenitor.0) {
@@ -126,6 +126,10 @@ fn handle_neutron(
 
         commands.get_entity(atom).despawn();
         commands.get_entity(bullet).despawn();
+
+        if events.0 >= 6 {
+            continue;
+        }
 
         let direction = bullet_velocity.0 + atom_velocity.0;
         // let direction =

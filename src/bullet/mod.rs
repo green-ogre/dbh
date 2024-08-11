@@ -197,7 +197,7 @@ impl NeutronBundle {
             collides: CollideWithEnemy,
             damage: CollisionDamage(2f32),
             lifespan: Lifespan(6f32),
-            uptime: Uptime(2f32),
+            uptime: Uptime(0f32),
             mesh: server.load("res/saved/bullet_1_mesh.msh"),
             material: NuclearNeutron {
                 modulation: Modulation(SpaceHaze::pink()),
@@ -217,7 +217,7 @@ impl NeutronBundle {
     }
 
     pub fn new_spawner() -> BulletSpawner {
-        BulletSpawner::new(1.5, move |transform, commands, server, audio_master| {
+        BulletSpawner::new(0.5, move |transform, commands, server, audio_master| {
             const SPEED: f32 = 1.5;
             for i in 0..4 {
                 let direction = i as f32 * 0.5 * PI + 0.25 * PI;

@@ -9,6 +9,7 @@ use winny::{
 };
 
 pub mod indicators;
+mod spatial;
 mod systems;
 
 #[derive(Debug)]
@@ -78,7 +79,7 @@ pub enum Collider {
 }
 
 impl Collider {
-    pub fn absolute(&self, transform: &Transform, log: Option<&'static str>) -> AbsoluteCollider {
+    pub fn absolute(&self, transform: &Transform) -> AbsoluteCollider {
         match self {
             Self::Rect(rect) => {
                 let mut abs = *rect;
@@ -105,12 +106,6 @@ impl Collider {
                     translation * scale * rotation * homogenous_circle_position;
                 let radius = circle.radius * (transform.scale.x + transform.scale.y) / 2f32;
 
-                if let Some(log) = log {
-                    trace!(
-                        "{log}: originial: {homogenous_circle_position:?}, transformed: {transformed_position:?}, transform: {transform:?}"
-                    );
-                }
-
                 AbsoluteCollider::Circle(CircleCollider {
                     position: transformed_position.into(),
                     radius,
@@ -120,9 +115,19 @@ impl Collider {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum AbsoluteCollider {
     Rect(RectCollider),
     Circle(CircleCollider),
+}
+
+impl AbsoluteCollider {
+    pub fn position(&self) -> Vec3f {
+        match self {
+            Self::Rect(rect) => rect.tl,
+            Self::Circle(circle) => circle.position,
+        }
+    }
 }
 
 impl CollidesWith<Self> for AbsoluteCollider {
