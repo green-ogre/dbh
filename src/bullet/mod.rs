@@ -238,6 +238,15 @@ pub struct RadialVelocity {
 }
 
 impl RadialVelocity {
+    pub fn new(strength: Radf) -> Self {
+        Self {
+            strength,
+            total_rotation: Default::default(),
+        }
+    }
+}
+
+impl RadialVelocity {
     pub fn update(&mut self, transform: &mut Transform, dt: &DeltaTime) {
         let rotation = Quaternion::from_angle_z(Rad(self.strength.0 * dt.delta));
         transform.rotation = transform.rotation * rotation;

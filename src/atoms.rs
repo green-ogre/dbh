@@ -1,15 +1,17 @@
 use crate::{
-    bullet::{NeutronBundle, Progenitor},
+    bullet::{NeutronBundle, Progenitor, RadialVelocity},
+    camera::{PlayerCamera, ScreenShake},
     collision::{CircleCollider, Collider, EnemyCollideEvent},
+    regular::RegularPolygons,
     shaders::{atoms::NuclearAtom, SpaceHaze},
     CollisionDamage, Enemy, GetOrLog, RandomDirectionIterator, Velocity,
 };
 use angle::Radf;
 use fxhash::FxHashSet;
 use mesh2d::Mesh2d;
-use rand::Rng;
+use rand::{Rng, SeedableRng};
 use server::AssetServer;
-use std::f32::consts::FRAC_PI_2;
+use std::f32::consts::{FRAC_PI_2, PI};
 use vector::{Vec2f, Vec3f};
 use winny::prelude::*;
 
@@ -19,10 +21,10 @@ pub struct AtomPlugin;
 impl Plugin for AtomPlugin {
     fn build(&mut self, app: &mut App) {
         app.add_systems(
-            Schedule::StartUp,
-            |mut commands: Commands, server: Res<AssetServer>| {
+            AppSchedule::PostStartUp,
+            |mut commands: Commands, server: Res<AssetServer>, polygons: Res<RegularPolygons>| {
                 let mut rng = rand::thread_rng();
-                for _ in 0..100 {
+                for _ in 0..10 {
                     let x = rng.gen_range(-500f32..500f32);
                     let y = rng.gen_range(-500f32..500f32);
 
@@ -34,6 +36,7 @@ impl Plugin for AtomPlugin {
                         velocity,
                         None,
                         &server,
+                        &polygons,
                         0,
                     ));
                 }
@@ -58,12 +61,10 @@ pub struct AtomBundle {
     collider: Collider,
     progenitor: Progenitor,
     events: Events,
-    // collides: CollideWithEnemy,
     damage: CollisionDamage,
-    // lifespan: Lifespan,
-    // uptime: Uptime,
     mesh: Handle<Mesh2d>,
     material: NuclearAtom,
+    radial: RadialVelocity,
 }
 
 impl AtomBundle {
@@ -72,6 +73,7 @@ impl AtomBundle {
         velocity: Vec3f,
         progenitor: Option<Entity>,
         server: &AssetServer,
+        polygons: &RegularPolygons,
         events: u32,
     ) -> Self {
         AtomBundle {
@@ -90,11 +92,14 @@ impl AtomBundle {
             events: Events(events),
             progenitor: Progenitor(progenitor),
             damage: CollisionDamage(1.),
-            mesh: server.load("res/saved/bullet_1_mesh.msh"),
+            mesh: polygons.0[6 - events as usize].clone(),
             material: NuclearAtom {
                 modulation: Modulation(SpaceHaze::purple()),
                 texture: server.load("res/noise/noise.png"),
             },
+            radial: RadialVelocity::new(Radf(
+                PI + rand::rngs::SmallRng::from_entropy().gen_range(-1f32..1f32),
+            )),
         }
     }
 }
@@ -105,6 +110,9 @@ fn handle_neutron(
     reader: EventReader<EnemyCollideEvent>,
     mut commands: Commands,
     server: Res<AssetServer>,
+    polygons: Res<RegularPolygons>,
+    mut camera: ResMut<PlayerCamera>,
+    delta: Res<DeltaTime>,
 ) {
     let mut already_handled = FxHashSet::default();
 
@@ -144,6 +152,7 @@ fn handle_neutron(
                 direction,
                 Some(atom),
                 &server,
+                &polygons,
                 events.0 + 1,
             ));
         }
@@ -160,5 +169,13 @@ fn handle_neutron(
                 Some(atom),
             ));
         }
+    }
+
+    if !already_handled.is_empty() {
+        camera.push_screen_shake(ScreenShake::new(
+            20.,
+            0.25,
+            delta.wrapping_elapsed_as_seconds(),
+        ));
     }
 }

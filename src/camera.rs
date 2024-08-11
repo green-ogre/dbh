@@ -1,8 +1,13 @@
+use std::f32::consts::TAU;
+
 use crate::{
     loader::LoaderApp,
+    mouse::MousePosition,
     player::{DirectionalVelocity, Player},
 };
-use rand::Rng;
+use noise::NoiseFn;
+use rand::{Rng, SeedableRng};
+use vector::Vec2f;
 use winny::{gfx::camera::Camera, math::vector::Vec3f, prelude::*};
 
 #[derive(Debug)]
@@ -13,13 +18,13 @@ impl Plugin for CameraPlugin {
         app.register_resource::<PlayerCamera>()
             .save_load_resource::<PlayerCamera>()
             .egui_resource::<PlayerCamera>()
-            .egui_resource::<ScreenShake>()
-            .insert_resource(ScreenShake {
-                intensity: 42.0,
-                duration: 0.5,
-                start_time: 0.0,
-            })
-            .add_systems(Schedule::Update, shake_screen)
+            // .egui_resource::<ScreenShake>()
+            // .insert_resource(ScreenShake {
+            //     intensity: 42.0,
+            //     duration: 0.5,
+            //     start_time: 0.0,
+            // })
+            // .add_systems(Schedule::Update, shake_screen)
             .add_systems(Schedule::PostUpdate, update_camera);
     }
 }
@@ -29,35 +34,58 @@ pub struct ScreenShake {
     intensity: f32,
     duration: f32,
     start_time: f32,
+    x_offset: Vec2f,
+    y_offset: Vec2f,
 }
 
-fn shake_screen(
-    reader: EventReader<KeyInput>,
-    mut camera: ResMut<PlayerCamera>,
-    shake: Res<ScreenShake>,
-    delta: Res<DeltaTime>,
-) {
-    for event in reader.peak_read() {
-        if matches!(
-            event,
-            KeyInput {
-                code: KeyCode::I,
-                state: KeyState::Pressed,
-                ..
-            }
-        ) {
-            let mut shake = shake.clone();
-            shake.start_time = delta.wrapping_elapsed_as_seconds();
-            camera.push_screen_shake(shake)
+impl ScreenShake {
+    pub fn new(intensity: f32, duration: f32, start_time: f32) -> Self {
+        let mut rng = rand::rngs::SmallRng::from_entropy();
+        let mut offset = move || {
+            Vec2f::new(
+                rng.gen_range(-1000f32..1000f32),
+                rng.gen_range(-1000f32..1000f32),
+            )
+        };
+
+        Self {
+            intensity,
+            duration,
+            start_time,
+            x_offset: offset(),
+            y_offset: offset(),
         }
     }
 }
+
+// fn shake_screen(
+//     reader: EventReader<KeyInput>,
+//     mut camera: ResMut<PlayerCamera>,
+//     shake: Res<ScreenShake>,
+//     delta: Res<DeltaTime>,
+// ) {
+//     for event in reader.peak_read() {
+//         if matches!(
+//             event,
+//             KeyInput {
+//                 code: KeyCode::I,
+//                 state: KeyState::Pressed,
+//                 ..
+//             }
+//         ) {
+//             let mut shake = *shake;
+//             shake.start_time = delta.wrapping_elapsed_as_seconds();
+//             camera.push_screen_shake(shake)
+//         }
+//     }
+// }
 
 fn update_camera(
     mut player_camera: ResMut<PlayerCamera>,
     player: Query<(Transform, DirectionalVelocity), With<Player>>,
     mut camera: Query<Mut<Transform>, With<Camera>>,
     delta: Res<DeltaTime>,
+    mouse_position: Res<MousePosition>,
 ) {
     let Ok(camera) = camera.get_single_mut() else {
         return;
@@ -68,7 +96,7 @@ fn update_camera(
     };
 
     player_camera.apply_screen_shake(&delta);
-    player_camera.follow_player(vel, player, camera, &delta);
+    player_camera.follow_player(vel, player, camera, &mouse_position, &delta);
 }
 
 /// Handles main camera logic.
@@ -84,6 +112,15 @@ pub struct PlayerCamera {
     shake_offset: Vec3f,
     #[skip]
     follow_point: Vec3f,
+    #[skip]
+    noise: Noise,
+}
+
+#[derive(Debug)]
+pub struct Noise(noise::OpenSimplex);
+
+impl egui_widget::Widget for Noise {
+    fn display(&mut self, ui: &mut egui::Ui) {}
 }
 
 impl Default for PlayerCamera {
@@ -97,6 +134,7 @@ impl Default for PlayerCamera {
             lead_factor: 1.0,
             follow_point: Vec3f::new(0., 0., 0.),
             shake_offset: Vec3f::zero(),
+            noise: Noise(noise::OpenSimplex::new(1)),
         }
     }
 }
@@ -107,11 +145,17 @@ impl PlayerCamera {
         velocity: &DirectionalVelocity,
         player: &Transform,
         camera: &mut Transform,
+        mouse_position: &MousePosition,
         dt: &DeltaTime,
     ) {
-        let distance_to_target = (player.translation - self.follow_point).magnitude();
+        let direction: Vec3f = mouse_position.0.into();
+        let offset = (direction - player.translation).normalize() * 100.;
 
-        let target: Vec3f = Vec3f::from(*velocity).normalize() + player.translation;
+        let target = player.translation + offset;
+
+        let distance_to_target = (target - self.follow_point).magnitude();
+
+        let target: Vec3f = Vec3f::from(*velocity).normalize() + target;
 
         if distance_to_target < self.delta {
             self.follow_point = target;
@@ -132,7 +176,6 @@ impl PlayerCamera {
     }
 
     pub fn push_screen_shake(&mut self, shake: ScreenShake) {
-        info!("pushing shake: {shake:?}");
         self.screen_shake.push(shake);
     }
 
@@ -143,10 +186,22 @@ impl PlayerCamera {
                 let remaining = 1.0 - (elapsed / shake.duration);
                 let current_intensity = shake.intensity * remaining;
 
-                let mut rng = rand::thread_rng();
+                // Sample the simplex space in a circle
+                let radius = 5.;
+
+                let x_noise = self.noise.0.get([
+                    (shake.x_offset.x + (remaining * TAU).cos() * radius) as f64,
+                    (shake.x_offset.y + (remaining * TAU).sin() * radius) as f64,
+                ]);
+
+                let y_noise = self.noise.0.get([
+                    (shake.y_offset.x + (remaining * TAU).cos() * radius) as f64,
+                    (shake.y_offset.y + (remaining * TAU).sin() * radius) as f64,
+                ]);
+
                 self.shake_offset = Vec3f::new(
-                    rng.gen_range(-1.0..1.0) * current_intensity,
-                    rng.gen_range(-1.0..1.0) * current_intensity,
+                    x_noise as f32 * current_intensity,
+                    y_noise as f32 * current_intensity,
                     0.0, // typically, we don't shake on the z-axis
                 );
             } else {

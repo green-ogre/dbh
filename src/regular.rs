@@ -18,7 +18,7 @@ impl Plugin for RegularPolygonsPlugin {
 }
 
 #[derive(Debug, Resource, Clone)]
-pub struct RegularPolygons(pub [Handle<Mesh2d>; 4]);
+pub struct RegularPolygons(pub [Handle<Mesh2d>; 7]);
 
 impl RegularPolygons {
     pub fn new(radius: f32, assets: &mut Assets<Mesh2d>) -> Self {

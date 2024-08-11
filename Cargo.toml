@@ -12,6 +12,7 @@ fxhash = "0.2.1"
 pollster = "0.3.0"
 bytemuck = { version = "1.12", features = ["derive"] }
 rand = { version = "0.8.5", features = ["small_rng"] }
+noise = "0.9"
 
 [profile.dev.package.'*']
 opt-level = 3
