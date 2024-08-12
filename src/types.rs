@@ -105,12 +105,6 @@ fn move_children(
     mut children: Query<(Parent, Mut<Transform>, Option<ChildOffset>)>,
 ) {
     for (Parent(entity), transform, offset) in children.iter_mut() {
-        // warn!("child!");
-        if let Some(parent) = parents.get(*entity) {
-            *transform = *parent;
-
-            // warn!("offset: {:#?}", offset);
-
         if let Some(parent) = parents.get(*entity) {
             *transform = *parent;
 

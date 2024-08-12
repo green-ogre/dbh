@@ -1,2 +1,4 @@
 **/target
 /pkg
+/itch_wasm
+itch_wasm.zip
