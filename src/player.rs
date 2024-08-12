@@ -75,6 +75,9 @@ pub struct PlayerExp(pub u32);
 #[derive(Component, Debug, Clone, Copy)]
 pub struct PlayerLevel(pub u32);
 
+#[derive(Component, Debug, Clone, Copy)]
+pub struct BulletCount(pub i32);
+
 impl PlayerLevel {
     pub fn level_up_exp(&self) -> u32 {
         self.0 * 5
@@ -119,6 +122,7 @@ pub struct PlayerBundle {
     last_known_vel: LastKnownVelocity,
     dash: Dash,
     flash: Flash,
+    bullets: BulletCount,
 }
 
 impl PlayerBundle {
@@ -138,8 +142,8 @@ impl PlayerBundle {
             directional_velocity: DirectionalVelocity::default(),
             collider: PlayerBundle::collider(),
             player: Player,
-            health: Health::new(100., 0.),
             flash: Flash(0.0),
+            health: Health::new(20., 0.),
             // sprite: SpriteBundle {
             //     sprite: Sprite {
             //         scale: Vec2f::new(0.1, 0.1),
@@ -153,6 +157,7 @@ impl PlayerBundle {
             material: PlayerMaterial {
                 modulation: Modulation(SpaceHaze::white()),
             },
+            bullets: BulletCount(10),
         }
     }
 
@@ -458,7 +463,7 @@ struct ShootInfo {
 }
 
 fn watch_click(
-    q: Query<(Transform, Velocity), With<Player>>,
+    mut q: Query<(Transform, Velocity, Mut<BulletCount>), With<Player>>,
     mouse: EventReader<MouseInput>,
     key: EventReader<KeyInput>,
     position: Res<MousePosition>,
@@ -467,7 +472,7 @@ fn watch_click(
     server: Res<AssetServer>,
     delta: Res<DeltaTime>,
 ) {
-    let Some((transform, _velocity)) = q.iter().next() else {
+    let Some((transform, _velocity, bullets)) = q.iter_mut().next() else {
         return;
     };
 
@@ -499,6 +504,10 @@ fn watch_click(
 
     while shoot.timer <= 0. {
         shoot.timer += 0.25;
+        // if bullets.0 <= 0 {
+        //     continue;
+        // }
+        // bullets.0 -= 1;
 
         let position: Vec3f = position.0.into();
         let direction = position - transform.translation;

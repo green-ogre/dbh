@@ -25,7 +25,7 @@ pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&mut self, app: &mut App) {
         app.insert_resource(EnemySpawner::new()).add_systems(
-            Schedule::PostUpdate,
+            Schedule::Update,
             (update_heading_towards_player, update_regular, spawn_enemies).run_if(should_run_game),
         );
     }

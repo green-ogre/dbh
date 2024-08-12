@@ -35,6 +35,7 @@ pub mod collision;
 pub mod enemy;
 pub mod loader;
 pub mod mouse;
+pub mod pickup;
 pub mod player;
 pub mod regular;
 pub mod shaders;
@@ -90,6 +91,7 @@ pub fn run() {
             ChildrenPlugin,
             enemy::EnemyPlugin,
             TextPlugin,
+            // pickup::PickupPlugin,
         ))
         // .insert_resource(TypeWriter::new(
         //     "Meltdown ...".into(),
@@ -427,7 +429,7 @@ fn startup(
     commands.spawn(make(TAU * 0.5, Vec3f::new(0., -amt, 0.)));
     commands.spawn(make(TAU * 0.75, Vec3f::new(amt, 00., 0.)));
 
-    let polygons = RegularPolygons::new(40., &mut assets);
+    // let polygons = RegularPolygons::new(40., &mut assets);
     let mut rng = rand::thread_rng();
     // for _ in 0..10 {
     //     let x = rng.gen_range(-500f32..500f32);
@@ -455,5 +457,5 @@ fn startup(
     //     4,
     // );
 
-    commands.insert_resource(polygons);
+    // commands.insert_resource(polygons);
 }

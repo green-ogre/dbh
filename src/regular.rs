@@ -16,7 +16,12 @@ pub struct RegularPolygonsPlugin;
 
 impl Plugin for RegularPolygonsPlugin {
     fn build(&mut self, app: &mut App) {
-        app.register_resource::<RegularPolygons>();
+        app.register_resource::<RegularPolygons>().add_systems(
+            AppSchedule::PostStartUp,
+            |mut commands: Commands, mut assets: ResMut<Assets<Mesh2d>>| {
+                commands.insert_resource(RegularPolygons::new(40., &mut assets));
+            },
+        );
     }
 }
 
