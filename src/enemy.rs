@@ -1,7 +1,8 @@
 use std::f32::consts::{PI, TAU};
 
 use angle::Radf;
-use rand::Rng;
+use camera::Camera;
+use rand::{Rng, SeedableRng};
 use server::AssetServer;
 use sets::IntoSystemStorage;
 use vector::{Vec2f, Vec3f};
@@ -24,7 +25,7 @@ pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&mut self, app: &mut App) {
         app.insert_resource(EnemySpawner::new()).add_systems(
-            Schedule::Update,
+            Schedule::PostUpdate,
             (update_heading_towards_player, update_regular, spawn_enemies).run_if(should_run_game),
         );
     }
@@ -49,6 +50,10 @@ impl Heading {
 /// The turning speed for headings.
 #[derive(Debug, Default, PartialEq, Clone, Copy, Component, AsEgui)]
 pub struct TurnSpeed(pub f32);
+
+/// The turning speed for headings.
+#[derive(Debug, Default, PartialEq, Clone, Copy, Component, AsEgui)]
+pub struct SpinSpeed(pub f32);
 
 impl Heading {
     pub fn steer_towards(&mut self, turn_speed: f32, from: &Vec3f, to: &Vec3f) {
@@ -113,6 +118,7 @@ pub fn spawn_regular(
     children: usize,
 ) {
     let mut enemy_cloud = Vec::new();
+    let mut rng = rand::rngs::SmallRng::from_entropy();
 
     let parent = commands
         .spawn((
@@ -124,9 +130,10 @@ pub fn spawn_regular(
                 ..Default::default()
             },
             Velocity(Default::default()),
-            Heading::new(2.),
-            TurnSpeed(2.),
+            Heading::new(rng.gen_range(1.5f32..4f32)),
+            TurnSpeed(rng.gen_range(1f32..3f32)),
             CollisionDamage(1.),
+            SpinSpeed(rng.gen_range(-2f32..2f32)),
             RadialVelocity::new(Radf(PI)),
             (
                 polygons.0[0].clone(),
@@ -173,7 +180,7 @@ pub fn spawn_regular(
 }
 
 fn update_regular(
-    mut q: Query<(Entity, Transform, EnemyCloud, Mut<RegularEnemy>)>,
+    mut q: Query<(Entity, SpinSpeed, Transform, EnemyCloud, Mut<RegularEnemy>)>,
     children: Query<Mut<ChildOffset>>,
     player_bullet: Query<Entity, Without<CollideWithPlayer>>,
     parent_haver: Query<Parent>,
@@ -183,8 +190,8 @@ fn update_regular(
     server: Res<AssetServer>,
     mut commands: Commands,
 ) {
-    for (entity, transform, cloud, angle) in q.iter_mut() {
-        angle.0 += time.delta * 0.25;
+    for (entity, spin, transform, cloud, angle) in q.iter_mut() {
+        angle.0 += time.delta * spin.0;
 
         if let Some(event) = collision.peak_read().find(|e| e.enemy == entity) {
             commands.get_entity(entity).despawn();
@@ -246,12 +253,12 @@ fn update_regular(
 use rand::rngs::ThreadRng;
 use winny::{app::window::Window, prelude::*};
 
-pub(super) fn random_outside_screen(window: Vec3f, rng: &mut ThreadRng) -> Vec3f {
-    let w_half = window.x / 2.;
-    let h_half = window.y / 2.;
+pub(super) fn random_outside_screen(window: Vec3f, size: Vec3f, rng: &mut ThreadRng) -> Vec3f {
+    let w_half = size.x / 2.;
+    let h_half = size.y / 2.;
 
-    let mut x = rng.gen_range(0f32..window.x);
-    let mut y = rng.gen_range(0f32..window.y);
+    let mut x = rng.gen_range(0f32..size.x);
+    let mut y = rng.gen_range(0f32..size.y);
 
     let (shiftx, shifty) = match rng.gen_range(0..3) {
         0 => (true, false),
@@ -276,7 +283,7 @@ pub(super) fn random_outside_screen(window: Vec3f, rng: &mut ThreadRng) -> Vec3f
         }
     }
 
-    Vec3f::new(x - w_half, y - h_half, 0.)
+    Vec3f::new(window.x + x - w_half, window.y + y - h_half, 0.)
 }
 
 #[derive(Debug, Resource)]
@@ -298,8 +305,10 @@ impl EnemySpawner {
 
 pub fn spawn_enemies(
     mut spawner: ResMut<EnemySpawner>,
-    window: Res<Window>,
+    enemies: Query<Entity, With<RegularEnemy>>,
+    camera: Query<Transform, With<Camera>>,
     time: Res<DeltaTime>,
+    window: Res<Window>,
     collision: EventReader<EnemyCollideEvent>,
     server: Res<AssetServer>,
     mut commands: Commands,
@@ -308,23 +317,30 @@ pub fn spawn_enemies(
 ) {
     spawner.time_elapsed += time.delta;
     let mut rng = rand::thread_rng();
+
+    let Some(position) = camera.iter().next() else {
+        return;
+    };
+
+    if enemies.iter().count() >= 30 {
+        return;
+    }
+
     let window = Vec3f::new(window.viewport.max.x, window.viewport.max.y, 0.);
 
-    let probability = 0.1 * time.delta;
+    let probability = 2. * time.delta;
     let sample: f32 = rng.gen();
 
     if sample < probability {
-        let position = random_outside_screen(window, &mut rng);
+        let position = random_outside_screen(position.translation, window, &mut rng);
 
-        spawn_regular(position, &polygons, &mut commands, &server, &mut audio, 5)
+        spawn_regular(
+            position,
+            &polygons,
+            &mut commands,
+            &server,
+            &mut audio,
+            rng.gen_range(3..7),
+        )
     }
-
-    // for variant in EnemyType::variants() {
-    //     let probability = spawner.spawn_table.get(variant) * time.delta;
-    //     let sample: f32 = rng.gen();
-
-    //     if sample < probability {
-    //         variant.spawn(&mut commands, &mut rng, window);
-    //     }
-    // }
 }

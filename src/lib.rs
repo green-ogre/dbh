@@ -444,14 +444,14 @@ fn startup(
     //         &mut audio,
     //     );
     // }
-    spawn_regular(
-        Default::default(),
-        &polygons,
-        &mut commands,
-        &server,
-        &mut audio,
-        4,
-    );
+    // spawn_regular(
+    //     Default::default(),
+    //     &polygons,
+    //     &mut commands,
+    //     &server,
+    //     &mut audio,
+    //     4,
+    // );
 
     commands.insert_resource(polygons);
 }
