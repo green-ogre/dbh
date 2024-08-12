@@ -1,7 +1,7 @@
 use std::ops::Range;
 use winny::{ecs::sets::IntoSystemStorage, math::vector::Vec2f, prelude::*};
 
-use crate::{player::Player, should_run_game, Health};
+use crate::{atoms::TotalEvents, player::Player, should_run_game, Health};
 
 #[derive(Debug)]
 pub struct TextPlugin;
@@ -107,6 +107,7 @@ fn display_type_writer(
 fn display_health(
     context: Res<RenderContext>,
     mut text_renderer: ResMut<TextRenderer>,
+    fission: Res<TotalEvents>,
     player: Query<Health, With<Player>>,
 ) {
     use winny::gfx::wgpu_text::glyph_brush::*;
@@ -126,6 +127,8 @@ fn display_health(
     }
     string.push_str("]");
 
+    let events = format!("Fission: {}", fission.0);
+
     text_renderer.draw(&context, || {
         let color: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
         let middle = Section::default()
@@ -141,6 +144,15 @@ fn display_health(
                     .v_align(VerticalAlign::Center),
             );
 
-        vec![middle]
+        let fission = Section::default()
+            .add_text(Text::new(&events).with_scale(20.).with_color(color))
+            .with_screen_position((context.config.width() as f32 / 2.0, 60.0))
+            .with_layout(
+                Layout::default()
+                    .h_align(HorizontalAlign::Center)
+                    .v_align(VerticalAlign::Center),
+            );
+
+        vec![middle, fission]
     });
 }
