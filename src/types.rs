@@ -105,11 +105,11 @@ fn move_children(
     mut children: Query<(Parent, Mut<Transform>, Option<ChildOffset>)>,
 ) {
     for (Parent(entity), transform, offset) in children.iter_mut() {
-        warn!("child!");
+        // warn!("child!");
         if let Some(parent) = parents.get(*entity) {
             *transform = *parent;
 
-            warn!("offset: {:#?}", offset);
+            // warn!("offset: {:#?}", offset);
 
             transform.translation += offset.map_or(Default::default(), |o| o.0);
         }
@@ -160,7 +160,7 @@ where
         match self.get(entity) {
             None => {
                 let tie = std::any::type_name::<<T as QueryData>::ReadOnly>();
-                tracing_log::log::warn!("expected a value of type {tie}, but found None");
+                // tracing_log::log::warn!("expected a value of type {tie}, but found None");
                 None
             }
             value => value,

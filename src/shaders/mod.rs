@@ -15,7 +15,12 @@ use self::{
         build_post_processing_pipeline_with_texture, PostProcessingPipeline,
     },
 };
-use winny::{ecs::sets::IntoSystemStorage, math::vector::Vec4f, prelude::*};
+use winny::{
+    ecs::sets::IntoSystemStorage,
+    gfx::mesh2d::{Mesh2dPipeline, Mesh2dPlugin},
+    math::vector::Vec4f,
+    prelude::*,
+};
 
 pub mod downscale;
 pub mod materials;
@@ -27,6 +32,7 @@ pub struct ShaderArtPlugin;
 impl Plugin for ShaderArtPlugin {
     fn build(&mut self, app: &mut App) {
         app.register_resource::<Pixler>()
+            .egui_component::<PlayerMaterial>()
             .add_plugins(MaterialPlugin::<NonagonMaterial>::new())
             .add_plugins(MaterialPlugin::<OctagonMaterial>::new())
             .add_plugins(MaterialPlugin::<HeptaMaterial>::new())
@@ -56,6 +62,7 @@ impl Plugin for ShaderArtPlugin {
             .add_systems(
                 AppSchedule::PreRender,
                 (
+                    update_player_material,
                     update_background_uniform,
                     post_processing::render_pass::<Background>,
                 ),
@@ -109,6 +116,22 @@ fn update_background_uniform(
             _padding: [0.0; 2],
         }]),
     );
+}
+
+fn update_player_material(
+    context: Res<RenderContext>,
+    mut pipeline: Option<ResMut<Mesh2dPipeline<PlayerMaterial>>>,
+    player: Query<PlayerMaterial, With<Player>>,
+) {
+    let Ok(material) = player.get_single() else {
+        return;
+    };
+
+    let Some(pipeline) = pipeline else {
+        return;
+    };
+
+    PlayerMaterial::update(material, &context, pipeline.material.single_buffer());
 }
 
 // fn update_player_health_buffer(

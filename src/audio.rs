@@ -2,9 +2,10 @@ use fxhash::FxHashMap;
 use std::collections::VecDeque;
 use winny::asset::server::AssetServer;
 use winny::audio::AudioSource;
+use winny::ecs::sets::IntoSystemStorage;
 use winny::prelude::*;
 
-use crate::ThreatLevel;
+use crate::{should_run_game, ThreatLevel};
 
 #[derive(Debug)]
 pub struct SoundPlugin;
@@ -15,7 +16,7 @@ impl Plugin for SoundPlugin {
             .insert_resource(AudioMaster::default())
             .add_systems(Schedule::StartUp, load_all_sounds)
             .add_systems(Schedule::PostUpdate, update_sound_queue)
-            .add_systems(Schedule::Update, update_music);
+            .add_systems(Schedule::PostUpdate, update_music.run_if(should_run_game));
     }
 }
 
@@ -74,15 +75,15 @@ pub struct AudioPath(pub &'static str);
 
 #[derive(Resource)]
 pub struct Music {
-    track_1: Track,
-    track_2: Track,
-    track_3: Track,
-    track_4: Track,
+    pub track_1: Track,
+    pub track_2: Track,
+    pub track_3: Track,
+    pub track_4: Track,
 }
 
 pub struct Track {
-    handle: Handle<AudioSource>,
-    entity: Option<Entity>,
+    pub handle: Handle<AudioSource>,
+    pub entity: Option<Entity>,
 }
 
 impl Track {

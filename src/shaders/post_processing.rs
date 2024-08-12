@@ -135,8 +135,8 @@ pub fn build_post_processing_pipeline_with_binding_and_vert_shader<T: 'static + 
 
 #[derive(Resource)]
 pub struct PostProcessingPipeline<T: 'static + Sync + Send> {
-    pipeline: RenderPipeline2d,
-    binding: Option<wgpu::BindGroup>,
+    pub pipeline: RenderPipeline2d,
+    pub binding: Option<wgpu::BindGroup>,
     _phantom: PhantomData<T>,
 }
 

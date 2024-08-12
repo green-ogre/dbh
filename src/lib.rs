@@ -1,5 +1,5 @@
 use atoms::{Atom, AtomBundle, AtomPlugin};
-use audio::{AudioMaster, SoundPlugin};
+use audio::{AudioMaster, Music, SoundPlugin};
 use bullet::NeutronBundle;
 use bullet::{spawner::WeaponPlugin, RadialVelocity};
 use camera::CameraPlugin;
@@ -50,8 +50,8 @@ pub fn run() {
         .add_plugins((
             DefaultPlugins {
                 window: WindowPlugin {
-                    title: "dbh",
-                    close_on_escape: true,
+                    title: "MELTDOWN",
+                    // close_on_escape: true,
                     window_size: Vec2f::new(512.0 * 2.0, 512.0 * 2.0),
                     viewport_size: Vec2f::new(512.0 * 2.0, 512.0 * 2.0),
                     ..Default::default()
@@ -100,11 +100,8 @@ pub fn run() {
         // ))
         // .add_systems(Schedule::StartUp, startup)
         .add_systems(Schedule::StartUp, pre_menu_startup)
-        .add_systems(Schedule::Update, menu.run_if(should_run_menu))
-        .add_systems(
-            Schedule::PreUpdate,
-            update_threat_level.run_if(should_run_game),
-        )
+        .add_systems(Schedule::PreUpdate, menu.run_if(should_run_menu))
+        .add_systems(Schedule::Update, update_threat_level)
         .add_systems(
             Schedule::PostUpdate,
             (apply_velocity, apply_radial_velocity, end_game).run_if(should_run_game),
@@ -159,11 +156,11 @@ impl Default for ThreatLevel {
     }
 }
 
-fn update_threat_level(atoms: Query<Atom>, mut threat: ResMut<ThreatLevel>) {
-    const ENEMEIES_PER_THREAT_LEVEL: u32 = 20;
-
-    let count = atoms.iter().count();
-    threat.0 = count as u32 / ENEMEIES_PER_THREAT_LEVEL;
+fn update_threat_level(mut threat: ResMut<ThreatLevel>, game_state: Res<GameState>) {
+    threat.0 = match *game_state {
+        GameState::Game => 4,
+        _ => 1,
+    }
 }
 
 fn pre_menu_startup(mut commands: Commands, server: Res<AssetServer>) {
@@ -320,10 +317,15 @@ fn end_game(
     mut commands: Commands,
     reader: EventReader<EndGame>,
     mut game_state: ResMut<GameState>,
+    mut music: ResMut<Music>,
 ) {
     if reader.peak().is_some() {
         commands.run_system_once_when(kill_all_entities, |_: Commands| true);
         *game_state = GameState::Death(1.0);
+        music.track_1.entity = None;
+        music.track_1.entity = None;
+        music.track_1.entity = None;
+        music.track_1.entity = None;
     }
 }
 

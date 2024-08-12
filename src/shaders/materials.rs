@@ -5,7 +5,7 @@ use winny::{
 
 macro_rules! impl_material {
     ($ty:ident, $raw_ty:ident) => {
-        #[derive(Component, Debug, Clone)]
+        #[derive(Component, AsEgui, Debug, Clone)]
         pub struct $ty {
             pub modulation: Modulation,
         }
@@ -27,6 +27,12 @@ macro_rules! impl_material {
                 server: &AssetServer,
             ) -> Handle<FragmentShaderSource> {
                 server.load("res/shaders/nuclear.wgsl")
+            }
+
+            fn update(&self, context: &RenderContext, binding: &wgpu::Buffer) {
+                context
+                    .queue
+                    .write_buffer(binding, 0, bytemuck::cast_slice(&[self.as_raw()]));
             }
         }
 

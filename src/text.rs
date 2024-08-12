@@ -115,7 +115,7 @@ fn display_health(
     };
 
     let mut string = String::new();
-    string.push_str("[");
+    string.push_str("hp: [");
     let hit_points = (player_health.ratio() * 10.0) as usize;
     for i in 0..10 {
         if hit_points >= i {

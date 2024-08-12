@@ -6,7 +6,7 @@ use crate::{
         CircleCollider, CollideWithPlayer, Collider, PlayerCollideEvent, RemoveOnPlayerCollision,
     },
     mouse::MousePosition,
-    shaders::{materials::PlayerMaterial, SpaceHaze},
+    shaders::{materials::PlayerMaterial, Crimson, SpaceHaze},
     should_run_game, CollisionDamage, Health, Velocity,
 };
 use winny::{
@@ -16,7 +16,7 @@ use winny::{
         cgmath::{Quaternion, Rad, Rotation3, Zero},
         mesh2d::Mesh2d,
     },
-    math::vector::{Vec2f, Vec3f},
+    math::vector::{Vec2f, Vec3f, Vec4f},
     prelude::*,
 };
 
@@ -81,6 +81,9 @@ impl PlayerLevel {
     }
 }
 
+#[derive(Component)]
+pub struct Flash(pub f32);
+
 #[derive(AsEgui, Component, Debug)]
 pub struct Dash {
     strength: f32,
@@ -115,6 +118,7 @@ pub struct PlayerBundle {
     material: PlayerMaterial,
     last_known_vel: LastKnownVelocity,
     dash: Dash,
+    flash: Flash,
 }
 
 impl PlayerBundle {
@@ -135,6 +139,7 @@ impl PlayerBundle {
             collider: PlayerBundle::collider(),
             player: Player,
             health: Health::new(100., 0.),
+            flash: Flash(0.0),
             // sprite: SpriteBundle {
             //     sprite: Sprite {
             //         scale: Vec2f::new(0.1, 0.1),
@@ -274,14 +279,16 @@ impl PlayerBundle {
 const PLAYER_SPEED: f32 = 5.0;
 
 fn apply_damage(
-    mut q: Query<Mut<Health>, With<Player>>,
+    mut q: Query<(Mut<Health>, Mut<Flash>), With<Player>>,
     damage: Query<(CollisionDamage, Option<RemoveOnPlayerCollision>), With<CollideWithPlayer>>,
     reader: EventReader<PlayerCollideEvent>,
     mut commands: Commands,
 ) {
-    let Some(health) = q.iter_mut().next() else {
+    let Some((health, flash)) = q.iter_mut().next() else {
         return;
     };
+
+    const FLASH_DURATION: f32 = 0.1;
 
     for event in reader.peak_read() {
         if let Some((damage, remove)) = damage.get(event.with) {
@@ -290,6 +297,10 @@ fn apply_damage(
 
             if remove.is_some() {
                 commands.get_entity(event.with).despawn();
+            }
+
+            if flash.0 <= FLASH_DURATION {
+                flash.0 = FLASH_DURATION;
             }
         }
     }
@@ -305,6 +316,8 @@ pub fn update_player(
             Mut<DirectionalVelocity>,
             Mut<LastKnownVelocity>,
             Mut<Dash>,
+            Mut<Flash>,
+            Mut<PlayerMaterial>,
         ),
         With<Player>,
     >,
@@ -314,7 +327,7 @@ pub fn update_player(
     // collision: EventReader<PlayerCollideEvent>,
     // mut level_writer: EventWriter<LevelUpEvent>,
 ) {
-    let Some((player, transform, Velocity(velocity), dir_vel, last_known_vel, dash)) =
+    let Some((player, transform, Velocity(velocity), dir_vel, last_known_vel, dash, flash, mat)) =
         q.iter_mut().next()
     else {
         return;
@@ -352,6 +365,13 @@ pub fn update_player(
     let angle = direction.y.atan2(direction.x);
 
     transform.rotation = Quaternion::from_angle_z(Rad(-angle - FRAC_PI_2));
+
+    flash.0 -= delta.delta;
+    if flash.0 > 0.0 {
+        mat.modulation.0 = Crimson::color(0);
+    } else {
+        mat.modulation.0 = SpaceHaze::white();
+    }
 
     // while exp.0 >= level.level_up_exp() {
     //     exp.0 -= level.level_up_exp();
