@@ -199,8 +199,8 @@ impl NeutronBundle {
                 radius: 30f32,
             }),
             collides: CollideWithEnemy,
-            damage: CollisionDamage(0.5),
-            lifespan: Lifespan(6f32),
+            damage: CollisionDamage(1.),
+            lifespan: Lifespan(4f32),
             uptime: Uptime(0f32),
             mesh: server.load("res/saved/bullet_1_mesh.msh"),
             material: NeutronMaterial {

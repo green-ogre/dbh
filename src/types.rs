@@ -111,6 +111,9 @@ fn move_children(
 
             // warn!("offset: {:#?}", offset);
 
+        if let Some(parent) = parents.get(*entity) {
+            *transform = *parent;
+
             transform.translation += offset.map_or(Default::default(), |o| o.0);
         }
     }
